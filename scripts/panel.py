@@ -4,7 +4,7 @@
 Kompaktní lišta s vlastními vektorovými ikonami (Material styl) kreslenými na
 Tkinter canvasu — bez jakýchkoli závislostí (jen stdlib). Klikáš myší, změny se
 hned ukládají do ~/.config/voice-claude/state.json, který čte plugin; panel se
-sám aktualizuje (~1×/s), takže panel, /speak i hlas jsou pořád synchronní.
+sám aktualizuje (~1×/s), takže panel, /voice-claude:speak i hlas jsou pořád synchronní.
 
 Ikony (popisek = tooltip při najetí):
   ⏻ zvuk zap/vyp · 🔇 ztlumit (1→3→∞ tahů) · ☰ délka krátké/dlouhé ·

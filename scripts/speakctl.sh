@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# voice-claude — ovládání pro /speak. Vytiskne lidsky čitelný výsledek.
+# voice-claude — ovládání pro /voice-claude:speak. Vytiskne lidsky čitelný výsledek.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${VC_PYTHON:-python3}"
 st() { "$PY" "$ROOT/scripts/state.py" "$@"; }
@@ -14,32 +14,32 @@ case "$cmd" in
     echo "🔊 voice-claude zapnut." ;;
   off)
     st set enabled false
-    echo "🔇 voice-claude vypnut (/speak on pro obnovení)." ;;
+    echo "🔇 voice-claude vypnut (/voice-claude:speak on pro obnovení)." ;;
   mute)
     n="${1:-}"
     if [ -z "$n" ]; then
       st set muteRemaining 999999
-      echo "🔇 ztlumeno do /speak on."
+      echo "🔇 ztlumeno do /voice-claude:speak on."
     else
-      case "$n" in ''|*[!0-9]*) echo "Použití: /speak mute <počet tahů>"; exit 0 ;; esac
+      case "$n" in ''|*[!0-9]*) echo "Použití: /voice-claude:speak mute <počet tahů>"; exit 0 ;; esac
       st set muteRemaining "$n"
       echo "🔇 ztlumeno na dalších $n tahů, pak se hlas sám zapne."
     fi ;;
   gender)
     if [ -z "$1" ]; then
-      echo "Použití: /speak gender <žena|muž>"
+      echo "Použití: /voice-claude:speak gender <žena|muž>"
     else
       g="$(vx normgender "$1")"
       v="$(vx gender "$1")"
       st set gender "$g"; st set voiceName "$v"
       echo "🎙️ pohlaví = $([ "$g" = male ] && echo muž || echo žena), hlas = $v"
-      echo "   (konkrétní jméno: /speak voice <jméno> | seznam: /speak voices)"
+      echo "   (konkrétní jméno: /voice-claude:speak voice <jméno> | seznam: /voice-claude:speak voices)"
     fi ;;
   voice)
     if [ -z "$1" ]; then
       echo "Dostupné české Chirp 3 HD hlasy:"
       vx list
-      echo "Použij např.: /speak voice Aoede"
+      echo "Použij např.: /voice-claude:speak voice Aoede"
     else
       full="$(vx expand "$1")"
       if [ -n "$full" ]; then
@@ -54,7 +54,7 @@ case "$cmd" in
     vx list ;;
   rate)
     if [ -z "$1" ]; then
-      echo "Použití: /speak rate <0.25–2.0>"
+      echo "Použití: /voice-claude:speak rate <0.25–2.0>"
     elif "$PY" -c "import sys; r=float(sys.argv[1]); sys.exit(0 if 0.25<=r<=2.0 else 1)" "$1" 2>/dev/null; then
       st set speakingRate "$1"; echo "⏩ tempo = $1"
     else
@@ -95,7 +95,7 @@ case "$cmd" in
       else
         echo "Ve WSL jsem nenašel Windows Python (python.exe)."
         echo "   Nainstaluj Python pro Windows (python.org nebo Microsoft Store) — pak"
-        echo "   /speak panel spustí lištu nativně a topmost bude držet nad Warpem."
+        echo "   /voice-claude:speak panel spustí lištu nativně a topmost bude držet nad Warpem."
         echo "   Dočasně lze i v Linuxu: $PY \"$ROOT/scripts/panel.py\" & (topmost ale nad Warpem nedrží)."
       fi
     elif "$PY" -c "import tkinter" 2>/dev/null; then
