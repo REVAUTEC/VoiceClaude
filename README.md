@@ -15,8 +15,8 @@ LLM krok → nulová extra latence). Plugin přečte jen obsah tagu. Čte se **a
 > a [Setup klíče](#setup-klíče-jednorázově).
 
 ```text
-# 1) Přidej tenhle repozitář jako marketplace
-/plugin marketplace add revautec/voiceclaude
+# 1) Přidej tenhle repozitář jako marketplace (HTTPS – funguje bez SSH klíče)
+/plugin marketplace add https://github.com/revautec/voiceclaude.git
 
 # 2) Nainstaluj plugin (při instalaci tě požádá o googleApiKey)
 /plugin install voice-claude@voice-claude
@@ -24,6 +24,17 @@ LLM krok → nulová extra latence). Plugin přečte jen obsah tagu. Čte se **a
 # 3) Ověř, že vše sedí
 /speak doctor
 ```
+
+> **⚠️ Důležité – proč HTTPS URL a ne zkratka `revautec/voiceclaude`:**
+> Claude Code u zkratky `owner/repo` klonuje **přes SSH** (`git@github.com`), což
+> selže na stroji bez nastaveného GitHub SSH klíče (`Permission denied (publickey)`),
+> i u veřejného repozitáře. Použij proto **plnou HTTPS adresu s `.git`** jako výše.
+> Alternativně lze zkratku povolit přes proměnnou prostředí:
+> ```bash
+> export CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1   # pak funguje i: /plugin marketplace add revautec/voiceclaude
+> ```
+> Kdyby i HTTPS skončilo SSH chybou, má tvůj git přepis `insteadOf` (viz
+> [Řešení potíží](#řešení-potíží-instalace)) — pak použij instalaci ze ZIPu.
 
 A je to — od téhle chvíle ti Claude po každé odpovědi **česky nahlas přečte
 krátké shrnutí**. Vypnout/zapnout kdykoli přes `/speak off` a `/speak on`.
@@ -78,17 +89,17 @@ plugin je jen **výstup**.
 
 ## Instalace
 
-Přímo z GitHubu:
+Přímo z GitHubu (HTTPS – doporučeno, funguje bez SSH klíče):
 
 ```
-/plugin marketplace add revautec/voiceclaude
+/plugin marketplace add https://github.com/revautec/voiceclaude.git
 /plugin install voice-claude@voice-claude
 ```
 
-Nebo z lokální kopie repozitáře:
+Nebo z lokální kopie / rozbaleného ZIPu (úplně bez gitu):
 
 ```
-/plugin marketplace add ~/projects/voiceclaude
+/plugin marketplace add ~/voiceclaude-main
 /plugin install voice-claude@voice-claude
 ```
 
@@ -100,6 +111,37 @@ Po instalaci ověř funkčnost:
 ```
 /speak doctor
 ```
+
+## Řešení potíží (instalace)
+
+**`SSH authentication failed … git@github.com: Permission denied (publickey)`**
+
+Claude Code u zkratky `owner/repo` klonuje přes SSH; bez GitHub SSH klíče to selže
+i u veřejného repa. Vyber si jedno řešení:
+
+1. **Použij HTTPS URL** (nejjednodušší):
+   ```
+   /plugin marketplace add https://github.com/revautec/voiceclaude.git
+   ```
+2. **Povol HTTPS pro zkratky** přes proměnnou prostředí (Claude Code v2.1.141+):
+   ```bash
+   export CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1
+   ```
+3. **Instalace ze ZIPu – úplně bez gitu** (funguje vždycky):
+   stáhni
+   [main.zip](https://github.com/revautec/voiceclaude/archive/refs/heads/main.zip),
+   rozbal a přidej rozbalenou složku jako lokální marketplace:
+   ```
+   /plugin marketplace add ~/voiceclaude-main
+   /plugin install voice-claude@voice-claude
+   ```
+
+**I HTTPS končí SSH chybou?** Tvůj git má globální přepis adres. Ověř a zruš:
+```bash
+git config --show-origin --get-regexp 'url.*insteadof'      # ukáže pravidlo
+git config --global --unset-all url."git@github.com:".insteadOf
+```
+…nebo prostě použij ZIP variantu (bod 3), která git vůbec nepoužívá.
 
 ## Ovládání: `/speak`
 
