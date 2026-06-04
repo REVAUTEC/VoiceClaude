@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/speak.sh"
+            "command": "CLAUDE_PLUGIN_OPTION_GOOGLEAPIKEY=\"${user_config.googleApiKey}\" CLAUDE_PLUGIN_OPTION_GENDER=\"${user_config.gender}\" CLAUDE_PLUGIN_OPTION_SPEAKINGRATE=\"${user_config.speakingRate}\" CLAUDE_PLUGIN_OPTION_MAXCHARS=\"${user_config.maxChars}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/speak.sh"
           }
         ]
       }

@@ -20,9 +20,9 @@ STATE_DIR = os.path.join(
 STATE_FILE = os.path.join(STATE_DIR, "state.json")
 DEFAULTS = {
     "enabled": True,
+    "gender": None,
     "voiceName": None,
     "speakingRate": None,
-    "languageCode": None,
     "muteRemaining": 0,
     "lastError": "",
 }

@@ -28,8 +28,12 @@ def has():
 print("yes" if has() else "no")
 PYEOF
 )"
-[ "$keyfound" = "yes" ] && ok "API klíč nalezen" \
-  || bad "API klíč nenalezen (zadej googleApiKey při instalaci pluginu, nebo nastav env GOOGLE_API_KEY)"
+if [ "$keyfound" = "yes" ]; then
+  ok "API klíč nalezen v prostředí"
+else
+  printf '  ℹ️  %s\n' "API klíč z instalace (userConfig) se předává přímo Stop hooku — doctor ho odsud nevidí, to je OK."
+  printf '      %s\n' "Ověř odesláním zprávy; chyba klíče by se ukázala níže u 'poslední TTS chyba'."
+fi
 # Diagnostika: které plugin-option proměnné tento podproces vidí (jen názvy, ne hodnoty).
 "$PY" - <<'PYEOF'
 import os

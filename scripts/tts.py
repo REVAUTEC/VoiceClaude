@@ -26,7 +26,8 @@ def getkey():
     # (GOOGLEAPIKEY / GOOGLE_API_KEY / googleApiKey …), proto hledáme libovolnou
     # CLAUDE_PLUGIN_OPTION_* proměnnou, jejíž název odpovídá 'googleapikey'.
     for name, val in os.environ.items():
-        if val and name.startswith("CLAUDE_PLUGIN_OPTION_"):
+        # '${' = nedosazená šablona (substituce selhala) → ignorovat.
+        if val and "${" not in val and name.startswith("CLAUDE_PLUGIN_OPTION_"):
             norm = name[len("CLAUDE_PLUGIN_OPTION_"):].replace("_", "").lower()
             if norm == "googleapikey":
                 return val

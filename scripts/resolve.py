@@ -14,7 +14,7 @@ import os
 import re
 import json
 
-MAXCHARS = 1200
+MAXCHARS = 1500
 try:
     _m = int(os.environ.get("VC_MAXCHARS") or MAXCHARS)
     if _m > 0:  # záporné/nulové by přes text[:MAXCHARS] uřízlo konec nebo vše

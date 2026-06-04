@@ -3,6 +3,7 @@
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${VC_PYTHON:-python3}"
 st() { "$PY" "$ROOT/scripts/state.py" "$@"; }
+vx() { "$PY" "$ROOT/scripts/voices.py" "$@"; }
 
 cmd="${1:-status}"
 [ $# -gt 0 ] && shift
@@ -24,9 +25,33 @@ case "$cmd" in
       st set muteRemaining "$n"
       echo "🔇 ztlumeno na dalších $n tahů, pak se hlas sám zapne."
     fi ;;
+  gender)
+    if [ -z "$1" ]; then
+      echo "Použití: /speak gender <žena|muž>"
+    else
+      g="$(vx normgender "$1")"
+      v="$(vx gender "$1")"
+      st set gender "$g"; st set voiceName "$v"
+      echo "🎙️ pohlaví = $([ "$g" = male ] && echo muž || echo žena), hlas = $v"
+      echo "   (konkrétní jméno: /speak voice <jméno> | seznam: /speak voices)"
+    fi ;;
   voice)
-    if [ -n "$1" ]; then st set voiceName "$1"; echo "🎙️ hlas = $1"
-    else echo "Použití: /speak voice <jméno>  (např. cs-CZ-Chirp3-HD-Achernar)"; fi ;;
+    if [ -z "$1" ]; then
+      echo "Dostupné české Chirp 3 HD hlasy:"
+      vx list
+      echo "Použij např.: /speak voice Aoede"
+    else
+      full="$(vx expand "$1")"
+      if [ -n "$full" ]; then
+        st set voiceName "$full"; echo "🎙️ hlas = $full"
+      else
+        echo "Neznámý hlas '$1'. Vyber z:"
+        vx list
+      fi
+    fi ;;
+  voices)
+    echo "Dostupné české Chirp 3 HD hlasy:"
+    vx list ;;
   rate)
     if [ -z "$1" ]; then
       echo "Použití: /speak rate <0.25–2.0>"
@@ -41,5 +66,5 @@ case "$cmd" in
     echo "voice-claude stav:"
     st getjson ;;
   *)
-    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | mute [n] | voice <jméno> | rate <x> | doctor" ;;
+    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | mute [n] | gender <žena|muž> | voice [jméno] | voices | rate <x> | doctor" ;;
 esac
