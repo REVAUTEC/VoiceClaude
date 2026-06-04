@@ -206,6 +206,15 @@ Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/
 Pillow se použijí jednodušší vektorové ikony kreslené přímo na canvasu (panel
 funguje i tak).
 
+**Always-on-top ve Windows/WSL:** ve WSLg je každé Linux okno samostatné Windows
+okno přes RAIL. Samotný X11 „topmost" **nedrží nad nativními Windows okny**
+(Warp, Windows Terminal…). Panel to řeší sám: po spuštění si přes `powershell.exe`
+nastaví **skutečný Windows topmost** (`SetWindowPos HWND_TOPMOST`) na své okno, takže
+zůstane navrchu i nad terminálem. Pokud by to ve tvé konfiguraci nezabralo:
+
+- spusť panel s lištou (spolehlivější spárování okna): `VC_PANEL_TITLED=1 python3 .../scripts/panel.py &`
+- nebo jako záloha **PowerToys → Always On Top** (`Win + Ctrl + T` na okno panelu).
+
 ### Výběr hlasu
 
 Plugin používá **jen české Chirp 3 HD hlasy**. Nemusíš psát celý název — buď zvol

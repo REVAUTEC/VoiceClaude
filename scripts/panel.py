@@ -18,6 +18,7 @@ Win 11 (WSLg), Ubuntu, macOS. Potřebuje Tkinter:
 import os
 import sys
 import shutil
+import base64
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -116,6 +117,61 @@ def _next(value, cycle):
     return cycle[0]
 
 
+# Titulek okna — slouží k vyhledání RAIL okna panelu na Windows straně (WSLg).
+WIN_MARKER = "voice-claude panel"
+
+
+def is_wsl():
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return True
+    try:
+        with open("/proc/version", encoding="utf-8", errors="ignore") as f:
+            return "microsoft" in f.read().lower()
+    except Exception:
+        return False
+
+
+def _powershell_exe():
+    exe = shutil.which("powershell.exe")
+    if exe:
+        return exe
+    cand = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+    return cand if os.path.exists(cand) else None
+
+
+_PIN_PS_TMPL = '''$ErrorActionPreference='SilentlyContinue'
+Add-Type @"
+using System;using System.Runtime.InteropServices;using System.Text;
+public class WT{
+ public delegate bool E(IntPtr h,IntPtr l);
+ [DllImport("user32.dll")] public static extern bool EnumWindows(E cb,IntPtr l);
+ [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);
+ [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h,IntPtr a,int x,int y,int cx,int cy,uint f);
+ public static void Pin(string m,IntPtr after){EnumWindows((h,l)=>{if(IsWindowVisible(h)){var sb=new StringBuilder(512);GetWindowText(h,sb,512);if(sb.ToString().IndexOf(m,StringComparison.OrdinalIgnoreCase)>=0){SetWindowPos(h,after,0,0,0,0,0x13);}}return true;},IntPtr.Zero);}
+}
+"@
+[WT]::Pin("%s",[IntPtr](%d))'''
+
+
+def set_windows_topmost(on):
+    """Ve WSLg nastaví RAIL oknu panelu skutečný Windows topmost (on=True →
+    HWND_TOPMOST -1) nebo ho zruší (on=False → HWND_NOTOPMOST -2), přes
+    powershell.exe. Best-effort; bez powershellu / mimo WSL tiše nic."""
+    exe = _powershell_exe()
+    if not exe:
+        return
+    after = -1 if on else -2
+    try:
+        ps = _PIN_PS_TMPL % (WIN_MARKER, after)
+        enc = base64.b64encode(ps.encode("utf-16-le")).decode()
+        subprocess.Popen([exe, "-NoProfile", "-NonInteractive",
+                          "-EncodedCommand", enc],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
 def render_icon(name, px, primary, accent, mode="auto", fill=1.0):
     """Vykreslí ikonu anti-aliasovaně (supersampling 4× + LANCZOS) → PIL Image.
     Souřadnice v „38-mřížce" se středem (0,0); P() je převede na pixely."""
@@ -172,6 +228,13 @@ def render_icon(name, px, primary, accent, mode="auto", fill=1.0):
             dr.polygon([P(7, dy), P(4, dy - 2.6), P(4, dy + 2.6)], fill=primary)
             dr.polygon([P(-7, dy), P(-4, dy - 2.6), P(-4, dy + 2.6)],
                        fill=primary)
+    elif name == "pin":
+        pts = [P(-6, -8), P(6, -8), P(6, -4), P(3, -4), P(2, 4), P(0, 9),
+               P(-2, 4), P(-3, -4), P(-6, -4)]
+        if mode == "on":
+            dr.polygon(pts, fill=primary)
+        else:
+            dr.line(pts + [pts[0]], fill=primary, width=tw, joint="curve")
     elif name == "grip":
         for dx in (-3, 3):
             for dy in (-7, 0, 7):
@@ -213,7 +276,11 @@ class Panel:
         self.catalog = voice_catalog()
         self.label_by_full = {full: lbl for lbl, full, _ in self.catalog}
         self.meta_by_label = {lbl: (full, g) for lbl, full, g in self.catalog}
-        self.borderless = sys.platform != "darwin"
+        # macOS: nativní lišta. VC_PANEL_TITLED=1 vynutí okno s lištou i jinde
+        # (pomáhá, když by ve WSLg bezrámové okno nešlo spárovat pro topmost).
+        self.borderless = sys.platform != "darwin" and \
+            not os.environ.get("VC_PANEL_TITLED")
+        self._wsl = is_wsl()
         self.hover = None
         self.st = {}
         self._drag = None
@@ -225,7 +292,7 @@ class Panel:
         self.font_tip = (fam, 9)
         self.font_badge = (fam, 7, "bold")
 
-        root.title("voice")
+        root.title(WIN_MARKER)
         root.attributes("-topmost", True)
         root.resizable(False, False)
         if self.borderless:
@@ -239,6 +306,7 @@ class Panel:
         self.orientation = s.get("panelOrientation") or "h"
         self.theme_mode = s.get("panelTheme") or "auto"
         self.alpha = self._coerce_alpha(s.get("panelAlpha"))
+        self.on_top = bool(s.get("panelOnTop", True))
         self.recompute_theme()
 
         self.cv = tk.Canvas(root, highlightthickness=0, bd=0,
@@ -258,6 +326,14 @@ class Panel:
         self.apply_window()
         self.resize()
         self.sync()
+        self._apply_topmost()
+
+        # Ve WSLg nestačí X11 -topmost vůči nativním Windows oknům (Warp atd.) —
+        # po vykreslení RAIL okna mu nastavíme skutečný Windows topmost (jen když
+        # je „vždy navrchu" zapnuté).
+        if self._wsl and self.on_top:
+            for delay in (700, 2000, 4500):
+                root.after(delay, lambda: set_windows_topmost(True))
 
     # ---- helpers -----------------------------------------------------------
     @staticmethod
@@ -279,9 +355,17 @@ class Panel:
         except Exception:
             pass
 
+    def _apply_topmost(self):
+        try:
+            self.root.attributes("-topmost", self.on_top)
+        except Exception:
+            pass
+        if self._wsl:
+            set_windows_topmost(self.on_top)
+
     def cell_names(self):
         core = ["power", "mute", "length", "voice", "speed",
-                "theme", "opacity", "orient"]
+                "theme", "opacity", "orient", "pin"]
         return (["grip"] + core + ["close"]) if self.borderless else core
 
     def resize(self):
@@ -409,6 +493,10 @@ class Panel:
             self.orientation = "v" if self.orientation == "h" else "h"
             self.resize()
             self.write(panelOrientation=self.orientation)
+        elif name == "pin":
+            self.on_top = not self.on_top
+            self._apply_topmost()
+            self.write(panelOnTop=self.on_top)
         elif name == "close":
             self.root.destroy()
 
@@ -450,6 +538,8 @@ class Panel:
             return "Průhlednost", "%d %%" % int(round(self.alpha * 100))
         if name == "orient":
             return "Orientace", "svisle" if self.orientation == "v" else "vodorovně"
+        if name == "pin":
+            return "Vždy navrchu", "zapnuto" if self.on_top else "vypnuto"
         if name == "close":
             return "Zavřít", ""
         return name, ""
@@ -502,6 +592,9 @@ class Panel:
             mode = self.theme_mode
         elif name == "opacity":
             fill = self.alpha
+        elif name == "pin":
+            primary = accent if self.on_top else col["dim"]
+            mode = "on" if self.on_top else "off"
         elif name in ("grip", "close"):
             primary = col["dim"]
         self.cv.create_image(cx, cy,
@@ -598,6 +691,14 @@ class Panel:
                           arrow="both", capstyle="round")
             c.create_line(cx - 7, cy + 4, cx + 7, cy + 4, fill=fg, width=2,
                           arrow="both", capstyle="round")
+        elif name == "pin":
+            pts = [cx - 6, cy - 8, cx + 6, cy - 8, cx + 6, cy - 4, cx + 3,
+                   cy - 4, cx + 2, cy + 4, cx, cy + 9, cx - 2, cy + 4,
+                   cx - 3, cy - 4, cx - 6, cy - 4]
+            if self.on_top:
+                c.create_polygon(pts, fill=accent, outline=accent)
+            else:
+                c.create_polygon(pts, fill="", outline=col["dim"], width=2)
         elif name == "close":
             for a, b in (((-6, -6), (6, 6)), ((-6, 6), (6, -6))):
                 c.create_line(cx + a[0], cy + a[1], cx + b[0], cy + b[1],

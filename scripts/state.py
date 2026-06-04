@@ -29,6 +29,7 @@ DEFAULTS = {
     "panelOrientation": "h",     # plovoucí panel: "h" vodorovně / "v" svisle
     "panelTheme": "auto",        # panel: "auto" (dle OS) / "dark" / "light"
     "panelAlpha": 1.0,           # panel: průhlednost 1.0 = plné, 0.5 = 50 %
+    "panelOnTop": True,          # panel: vždy navrchu (always-on-top) zap/vyp
 }
 
 
