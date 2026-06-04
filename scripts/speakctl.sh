@@ -79,13 +79,30 @@ case "$cmd" in
       st set summaryLength short; echo "✍ délka = krátké."
     fi ;;
   panel)
-    if "$PY" -c "import tkinter" 2>/dev/null; then
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      # WSL → spusť panel NATIVNĚ ve Windows (Windows Python). Tam -topmost drží
+      # i nad Warpem; WSLg okno to neumí. Sahá do WSL stavu přes UNC cestu.
+      winpy="$(command -v python.exe 2>/dev/null || command -v py.exe 2>/dev/null)"
+      if [ -n "$winpy" ]; then
+        sf="${XDG_CONFIG_HOME:-$HOME/.config}/voice-claude/state.json"
+        mkdir -p "$(dirname "$sf")"
+        [ -f "$sf" ] || st getjson > "$sf"   # ať existuje pro UNC přístup
+        wpanel="$(wslpath -w "$ROOT/scripts/panel.py" 2>/dev/null)"
+        wstate="$(wslpath -w "$sf" 2>/dev/null)"
+        ( "$winpy" "$wpanel" "$wstate" >/dev/null 2>&1 & )
+        echo "🪟 panel spuštěn nativně ve Windows ($winpy) — drží nad Warpem."
+        echo "   (sdílí stav přes $wstate)"
+      else
+        echo "Ve WSL jsem nenašel Windows Python (python.exe)."
+        echo "   Nainstaluj Python pro Windows (python.org nebo Microsoft Store) — pak"
+        echo "   /speak panel spustí lištu nativně a topmost bude držet nad Warpem."
+        echo "   Dočasně lze i v Linuxu: $PY \"$ROOT/scripts/panel.py\" & (topmost ale nad Warpem nedrží)."
+      fi
+    elif "$PY" -c "import tkinter" 2>/dev/null; then
       nohup "$PY" "$ROOT/scripts/panel.py" >/dev/null 2>&1 &
       echo "🪟 panel spuštěn (plovoucí ikonová lišta, always-on-top)."
       "$PY" -c "import PIL" 2>/dev/null || \
         echo "   tip: pro hladké (anti-aliasované) ikony nainstaluj Pillow: pip install pillow"
-      echo "   Pokud se neukázal: WSL → potřebuješ Windows 11 (WSLg) a 'sudo apt install python3-tk';"
-      echo "   nejjistější je spustit ho z vlastního terminálu: $PY \"$ROOT/scripts/panel.py\" &"
     else
       echo "Chybí Tkinter (GUI knihovna)."
       echo "   Ubuntu/WSL: sudo apt install python3-tk"

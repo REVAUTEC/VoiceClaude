@@ -13,11 +13,18 @@ import json
 import math
 import tempfile
 
-STATE_DIR = os.path.join(
-    os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
-    "voice-claude",
-)
-STATE_FILE = os.path.join(STATE_DIR, "state.json")
+# VC_STATE_FILE umožní nasměrovat na konkrétní soubor (např. když panel běží jako
+# nativní Windows proces a sahá do WSL stavu přes \\wsl.localhost\… cestu).
+_OVERRIDE = os.environ.get("VC_STATE_FILE")
+if _OVERRIDE:
+    STATE_FILE = _OVERRIDE
+    STATE_DIR = os.path.dirname(_OVERRIDE) or "."
+else:
+    STATE_DIR = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+        "voice-claude",
+    )
+    STATE_FILE = os.path.join(STATE_DIR, "state.json")
 DEFAULTS = {
     "enabled": True,
     "gender": None,
