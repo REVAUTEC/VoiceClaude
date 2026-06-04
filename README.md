@@ -33,8 +33,9 @@ A je to — od téhle chvíle ti Claude po každé odpovědi **česky nahlas př
 krátké shrnutí**.
 
 > **📛 Jak se volají příkazy:** u pluginů jsou příkazy **jmenné (namespaced)** — píšeš
-> **`/voice-claude:speak …`**, ne holé `/speak`. V našeptávači (`/`) stačí napsat
-> `voice` nebo `speak` a vybrat ho ze seznamu. Nejčastější:
+> vždy **celé `/voice-claude:speak …`** (zkrácené `speak` bez prefixu Claude Code
+> nenabídne). V našeptávači (`/`) stačí napsat `voice` nebo `speak` a vybrat ze
+> seznamu. Nejčastější:
 > ```text
 > /voice-claude:speak            # stav
 > /voice-claude:speak off        # vypnout   ( … on = zapnout )
@@ -64,6 +65,22 @@ krátké shrnutí**.
 
 Plugin je tak **mluvící hned po instalaci**, bez další konfigurace (default je
 zapnuto). Pro vývoj/test bez marketplace lze i `claude --plugin-dir ./voiceclaude`.
+
+## 🎛️ Ovládací panel (klikání myší)
+
+Nemusíš nic psát — spusť **ovládací panel** a klikej myší:
+
+```text
+/voice-claude:speak panel
+```
+
+![voice-claude — ovládací panel](docs/panel-dark.png)
+
+Plovoucí ikonová lišta leží **nad terminálem** (always-on-top) a každý klik se hned
+uloží do stavu, který plugin čte — panel, příkazy i hlas jsou pořád synchronní. Ikony
+jsou vlastní vektorové, hladké (anti-aliasované) přes volitelný **Pillow**. Co která
+ikona dělá, instalaci a držení nad Warpem najdeš v sekci
+[Plovoucí panel](#plovoucí-panel-ovládání-myší) níže.
 
 ## Jak to funguje
 
@@ -166,22 +183,21 @@ git config --global --unset-all url."git@github.com:".insteadOf
 ## Ovládání: `/voice-claude:speak`
 
 > **Pozn. k názvu:** Claude Code u pluginů používá **jmenné (namespaced) příkazy** —
-> doopravdy píšeš **`/voice-claude:speak …`**, ne holé `/speak`. V našeptávači (`/`)
-> stačí napsat `voice` nebo `speak` a vybrat ho ze seznamu. **Tabulka níže používá pro
-> stručnost zápis `/speak …` = zkratku za `/voice-claude:speak …`.**
+> píšeš vždy celé **`/voice-claude:speak …`**. V našeptávači (`/`) stačí napsat
+> `voice` nebo `speak` a vybrat ho ze seznamu.
 
 | Příkaz | Co dělá |
 |---|---|
-| `/speak` nebo `/speak status` | stav (zap/vyp, délka, pohlaví, hlas, tempo, mute, poslední chyba) |
-| `/speak on` / `/speak off` / `/speak toggle` | zapne / vypne / přepne |
-| `/speak short` / `/speak long` / `/speak length` | délka shrnutí: **krátké** (jen 1. věta) / **dlouhé** (celé `<voice>`) / přepnout |
-| `/speak mute <n>` | ztlumí dalších **n** tahů, pak se sám zapne |
-| `/speak gender <žena\|muž>` | vybere pohlaví a tím výchozí hlas (žena → Aoede, muž → Charon) |
-| `/speak voices` | vypíše dostupné české Chirp 3 HD hlasy |
-| `/speak voice <jméno>` | konkrétní hlas krátkým jménem (např. `/speak voice Leda`) |
-| `/speak rate <0.25–2.0>` | tempo řeči |
-| `/speak panel` | spustí **plovoucí ovládací panel** (viz níže) |
-| `/speak doctor` | preflight: python, jq, přehrávač, klíč, poslední chyba |
+| `/voice-claude:speak` nebo `/voice-claude:speak status` | stav (zap/vyp, délka, pohlaví, hlas, tempo, mute, poslední chyba) |
+| `/voice-claude:speak on` / `/voice-claude:speak off` / `/voice-claude:speak toggle` | zapne / vypne / přepne |
+| `/voice-claude:speak short` / `/voice-claude:speak long` / `/voice-claude:speak length` | délka shrnutí: **krátké** (jen 1. věta) / **dlouhé** (celé `<voice>`) / přepnout |
+| `/voice-claude:speak mute <n>` | ztlumí dalších **n** tahů, pak se sám zapne |
+| `/voice-claude:speak gender <žena\|muž>` | vybere pohlaví a tím výchozí hlas (žena → Aoede, muž → Charon) |
+| `/voice-claude:speak voices` | vypíše dostupné české Chirp 3 HD hlasy |
+| `/voice-claude:speak voice <jméno>` | konkrétní hlas krátkým jménem (např. `/voice-claude:speak voice Leda`) |
+| `/voice-claude:speak rate <0.25–2.0>` | tempo řeči |
+| `/voice-claude:speak panel` | spustí **plovoucí ovládací panel** (viz níže) |
+| `/voice-claude:speak doctor` | preflight: python, jq, přehrávač, klíč, poslední chyba |
 
 Default: **zapnuto**, jazyk **cs-CZ** (napevno), hlas **ženský** (Aoede), délka **dlouhé**,
 max. délka **1500** znaků.
@@ -191,7 +207,7 @@ max. délka **1500** znaků.
 Když nechceš psát příkazy, spusť **mini-appku** — kompaktní **ikonovou lištu**, která
 **leží nad terminálem (always-on-top)** a ovládáš ji **myší**. Ikony jsou vlastní
 vektorové (Material styl, kreslené na canvasu) — **bez závislostí navíc**, jen Tkinter.
-Klik se hned uloží do stejného stavu, který čte plugin, takže panel, `/speak` i hlas
+Klik se hned uloží do stejného stavu, který čte plugin, takže panel, `/voice-claude:speak` i hlas
 jsou pořád synchronní (panel se sám aktualizuje ~1×/s). Popisek každé ikony se ukáže
 jako **tooltip** při najetí myší.
 
@@ -214,7 +230,15 @@ Ikony zleva doprava:
 Vzhled se ukládá do stavu (`panelTheme`, `panelAlpha`, `panelOrientation`), takže se
 panel otevře tak, jak jsi ho nechal.
 
-**Spuštění:** `/speak panel` (doporučeno — spouštěč si vyřeší správný Python i cesty
+Světlý motiv (auto dle OS) a svislá orientace (přepínač ⇅):
+
+<p align="left">
+  <img src="docs/panel-light.png" alt="voice-claude panel — světlý motiv" width="540">
+  &nbsp;
+  <img src="docs/panel-vertical.png" alt="voice-claude panel — svislá orientace" height="190">
+</p>
+
+**Spuštění:** `/voice-claude:speak panel` (doporučeno — spouštěč si vyřeší správný Python i cesty
 sám). `/voice-claude:speak doctor` zkontroluje, že máš pro panel vše potřebné.
 
 **Co doinstalovat (podle platformy):**
@@ -231,7 +255,7 @@ canvasu — panel funguje i tak.
 
 **Always-on-top ve Windows/WSL:** WSLg okno (Linux GUI přes RAIL) **neumí držet
 topmost nad nativními Windows okny** (Warp, Windows Terminal…) — z Linux strany se to
-spolehlivě nevyřeší. Proto ve WSL `/speak panel` spustí panel **nativně ve Windows
+spolehlivě nevyřeší. Proto ve WSL `/voice-claude:speak panel` spustí panel **nativně ve Windows
 Pythonem** (`python.exe`), kde `-topmost` je standardní Win32 a **drží nad Warpem**.
 Panel přitom sahá do **stejného** `state.json` ve WSL přes `\\wsl.localhost\…` cestu,
 takže zůstává synchronní s pluginem.
@@ -247,7 +271,7 @@ takže zůstává synchronní s pluginem.
 ### Výběr hlasu
 
 Plugin používá **jen české Chirp 3 HD hlasy**. Nemusíš psát celý název — buď zvol
-pohlaví (`/speak gender žena|muž`), nebo krátké jméno (`/speak voice Aoede`):
+pohlaví (`/voice-claude:speak gender žena|muž`), nebo krátké jméno (`/voice-claude:speak voice Aoede`):
 
 - **ženské:** Aoede, Kore, Leda, Zephyr
 - **mužské:** Puck, Charon, Fenrir, Orus
@@ -255,7 +279,7 @@ pohlaví (`/speak gender žena|muž`), nebo krátké jméno (`/speak voice Aoede
 Pohlaví lze předvybrat i při instalaci v poli **„Hlas: žena nebo muž"**.
 
 > Pozn.: Claude Code v instalačním dialogu neumí rozbalovací/radio výběr — proto je
-> pohlaví textové pole a konkrétní jméno hlasu se volí příkazem `/speak voice`.
+> pohlaví textové pole a konkrétní jméno hlasu se volí příkazem `/voice-claude:speak voice`.
 
 ## Kvalita zvuku
 
@@ -270,7 +294,7 @@ Pokud řeč **šumí** nebo zní méně kvalitně, je to skoro vždy v **přehr�
   # nebo:
   sudo apt install pulseaudio-utils  # → paplay
   ```
-  Po instalaci je `/speak doctor` ukáže jako vybraný přehrávač.
+  Po instalaci je `/voice-claude:speak doctor` ukáže jako vybraný přehrávač.
 - **Vzorkovací frekvence:** plugin si o zvuk říká ve **48 kHz** (čisté převzorkování na
   straně Googlu), což omezuje šum z lokálního převzorkování. Lze změnit přes
   `export VC_SAMPLE_RATE=24000` (nativní rychlost Chirp 3 HD).
@@ -278,7 +302,7 @@ Pokud řeč **šumí** nebo zní méně kvalitně, je to skoro vždy v **přehr�
 ## Soukromí
 
 Mluvené **shrnutí** odpovědi se posílá do Google (TTS). Pro citlivé / klientské
-projekty hlas vypni (`/speak off`). Plugin běží lokálně, klíč se nikam neposílá
+projekty hlas vypni (`/voice-claude:speak off`). Plugin běží lokálně, klíč se nikam neposílá
 kromě hlavičky volání na Google.
 
 ## Stav / log
@@ -294,7 +318,7 @@ kromě hlavičky volání na Google.
   plugin.json        # manifest pluginu + userConfig (googleApiKey, hlas, tempo…)
   marketplace.json   # marketplace listing pro /plugin marketplace add
 commands/
-  speak.md           # slash command /speak
+  speak.md           # slash command /voice-claude:speak
 hooks/
   hooks.json         # registrace SessionStart + Stop hooků
   injectvoiceinstruction.sh  # SessionStart: vloží instrukci na <voice> tag
@@ -306,7 +330,7 @@ scripts/
   voices.py          # české Chirp 3 HD hlasy + mapování pohlaví → jméno
   panel.py           # plovoucí ikonový panel (Tkinter; AA ikony přes volitelný
                      #   Pillow; dark/light, průhlednost, H/V, always-on-top)
-  speakctl.sh        # logika /speak (vč. spuštění panelu — ve WSL Windows Pythonem)
+  speakctl.sh        # logika /voice-claude:speak (vč. spuštění panelu — ve WSL Windows Pythonem)
   doctor.sh          # diagnostika
   play.sh            # přehrávač audia
 ```

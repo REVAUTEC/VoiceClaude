@@ -27,7 +27,7 @@ else
   bad "žádný použitelný přehrávač (nainstaluj pulseaudio-utils → paplay, nebo ffmpeg → ffplay)"
 fi
 
-# Plovoucí panel (/speak panel). Ve WSL běží nativně Windows Pythonem (kvůli
+# Plovoucí panel (/voice-claude:speak panel). Ve WSL běží nativně Windows Pythonem (kvůli
 # always-on-top nad Warpem); na Linuxu/macOS lokálním Pythonem.
 if grep -qi microsoft /proc/version 2>/dev/null; then
   winpy="$(command -v python.exe 2>/dev/null || command -v py.exe 2>/dev/null)"
