@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""voice-claude — plovoucí mini-panel (always-on-top) pro ovládání myší.
+"""voice-claude — plovoucí ikonový mini-panel (always-on-top).
 
-Malé okno s tlačítky, které leží nad terminálem. Klikáš myší, změny se hned
-ukládají do stejného ~/.config/voice-claude/state.json, který čte plugin —
-panel, /speak i hlas jsou pořád synchronní (panel se sám aktualizuje).
+Kompaktní lišta s vlastními vektorovými ikonami (Material styl) kreslenými na
+Tkinter canvasu — bez jakýchkoli závislostí (jen stdlib). Klikáš myší, změny se
+hned ukládají do ~/.config/voice-claude/state.json, který čte plugin; panel se
+sám aktualizuje (~1×/s), takže panel, /speak i hlas jsou pořád synchronní.
 
-Funkce: zap/vyp, MUTE (na pár tahů, na první klik), krátké/dlouhé, výběr hlasu,
-tempo, přepínač vodorovně/svisle (⇅), automatický dark/light dle OS (◑) a
-přepínání průhlednosti (100/75/50 %).
+Ikony (popisek = tooltip při najetí):
+  ⏻ zvuk zap/vyp · 🔇 ztlumit (1→3→∞ tahů) · ☰ délka krátké/dlouhé ·
+  👤 výběr hlasu · ◔ tempo · ◑ téma (auto/dark/light) · ▣ průhlednost ·
+  ⇅ orientace · (⠿ táhnout, ✕ zavřít — bezrámové okno)
 
-Funguje na Windows 11 (přes WSLg), Ubuntu i macOS. Jen Python stdlib (Tkinter).
+Win 11 (WSLg), Ubuntu, macOS. Potřebuje Tkinter:
   Ubuntu/WSL:  sudo apt install python3-tk
-  macOS:       bývá součástí Pythonu (nebo: brew install python-tk)
-
-Spuštění:   python3 panel.py        (nebo /speak panel)
+  macOS:       brew install python-tk
 """
 import os
 import sys
@@ -21,35 +21,37 @@ import shutil
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import state  # noqa: E402  (sdílený atomický stav)
-import voices  # noqa: E402  (seznam hlasů)
+import state  # noqa: E402
+import voices  # noqa: E402
 
 try:
     import tkinter as tk
 except Exception:
-    sys.stderr.write(
-        "Chybí Tkinter. Ubuntu/WSL: sudo apt install python3-tk | "
-        "macOS: brew install python-tk\n"
-    )
+    sys.stderr.write("Chybí Tkinter. Ubuntu/WSL: sudo apt install python3-tk\n")
     sys.exit(1)
 
 POLL_MS = 1000
 RATE_STEP = 0.25
 RATE_MIN, RATE_MAX = 0.25, 2.0
+RATE_CYCLE = [0.75, 1.0, 1.25, 1.5, 2.0]
 ALPHA_CYCLE = [1.0, 0.75, 0.5]
-MUTE_CYCLE = [0, 1, 3, 999999]          # klik cykluje: vyp → 1 → 3 → ∞ → vyp
+MUTE_CYCLE = [0, 1, 3, 999999]
 THEME_CYCLE = ["auto", "dark", "light"]
 
-DARK = dict(bg="#1f1f23", sub="#26262b", fg="#e6e6e6", btn="#34343a",
-            active="#45454d", on="#2e7d32", off="#a83a3a", mute="#9a6a12",
-            white="#ffffff", handle="#3a3a42")
-LIGHT = dict(bg="#ededed", sub="#e3e3e3", fg="#1b1b1b", btn="#dadada",
-             active="#c4c4c4", on="#3f9442", off="#d84141", mute="#c79a2e",
-             white="#ffffff", handle="#cfcfcf")
+CELL = 38
+GAP = 3
+MARGIN = 7
+RAD = 10
+
+DARK = dict(surface="#1b1b21", elevate="#2e2e38", fg="#d8d8df", dim="#71717c",
+            on="#4cb050", off="#ef5350", amber="#ffb02e", accent="#6b9bff",
+            menu_bg="#26262e", menu_fg="#e6e6ea", menu_act="#39394a")
+LIGHT = dict(surface="#f4f4f7", elevate="#e4e4ec", fg="#3a3a44", dim="#a2a2ad",
+             on="#43a047", off="#e53935", amber="#e8930a", accent="#3b6fe0",
+             menu_bg="#ffffff", menu_fg="#23232b", menu_act="#e8eefc")
 
 
 def detect_dark():
-    """Best-effort detekce tmavého režimu OS (macOS / Windows / WSL / GNOME)."""
     env = os.environ.get("VC_PANEL_THEME", "").strip().lower()
     if env in ("dark", "light"):
         return env == "dark"
@@ -64,18 +66,15 @@ def detect_dark():
                 winreg.HKEY_CURRENT_USER,
                 r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
             return winreg.QueryValueEx(k, "AppsUseLightTheme")[0] == 0
-        # WSL: zeptej se Windows hosta
         if shutil.which("powershell.exe"):
             r = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command",
-                 "(Get-ItemProperty -Path "
-                 "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes"
-                 "\\Personalize).AppsUseLightTheme"],
+                 "(Get-ItemProperty -Path HKCU:\\Software\\Microsoft\\Windows"
+                 "\\CurrentVersion\\Themes\\Personalize).AppsUseLightTheme"],
                 capture_output=True, text=True, timeout=4)
             s = r.stdout.strip()
             if s in ("0", "1"):
                 return s == "0"
-        # GNOME / Linux
         if shutil.which("gsettings"):
             r = subprocess.run(
                 ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
@@ -85,31 +84,49 @@ def detect_dark():
                 return True
             if "light" in low:
                 return False
-            r2 = subprocess.run(
-                ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
-                capture_output=True, text=True, timeout=2)
-            if "dark" in r2.stdout.lower():
-                return True
     except Exception:
         pass
-    return True  # fallback: tmavý
+    return True
 
 
 def voice_catalog():
     out = []
-    for label_g, names, g in (("žena", voices.FEMALE, "female"),
-                              ("muž", voices.MALE, "male")):
+    for g_lbl, names, g in (("žena", voices.FEMALE, "female"),
+                            ("muž", voices.MALE, "male")):
         for n in names:
-            out.append(("%s · %s" % (label_g, n), voices.PREFIX + n, g))
+            out.append(("%s · %s" % (g_lbl, n), voices.PREFIX + n, g))
     return out
 
 
 def _next(value, cycle):
-    """Další prvek v cyklu (s tolerancí pro floaty); mimo cyklus → první."""
     for i, v in enumerate(cycle):
-        if abs(v - value) < 1e-6 if isinstance(v, float) else v == value:
+        same = abs(v - value) < 1e-6 if isinstance(v, float) else v == value
+        if same:
             return cycle[(i + 1) % len(cycle)]
     return cycle[0]
+
+
+class Tip:
+    """Jednoduchý tooltip."""
+    def __init__(self, root):
+        self.root = root
+        self.win = None
+        self.after = None
+
+    def show(self, x, y, text, colors, font):
+        self.hide()
+        self.win = w = tk.Toplevel(self.root)
+        w.overrideredirect(True)
+        w.attributes("-topmost", True)
+        tk.Label(w, text=text, bg=colors["elevate"], fg=colors["fg"],
+                 font=font, padx=7, pady=3, bd=0).pack()
+        w.update_idletasks()
+        w.geometry("+%d+%d" % (x, y))
+
+    def hide(self):
+        if self.win is not None:
+            self.win.destroy()
+            self.win = None
 
 
 class Panel:
@@ -118,13 +135,16 @@ class Panel:
         self.catalog = voice_catalog()
         self.label_by_full = {full: lbl for lbl, full, _ in self.catalog}
         self.meta_by_label = {lbl: (full, g) for lbl, full, g in self.catalog}
-        self._syncing = False
-        self.borderless = sys.platform != "darwin"  # mac: nech nativní titlebar
+        self.borderless = sys.platform != "darwin"
+        self.hover = None
+        self.st = {}
+        self._drag = None
+        self._tip_after = None
 
         fam = {"darwin": "Helvetica Neue", "win32": "Segoe UI"}.get(
             sys.platform, "DejaVu Sans")
-        self.font = (fam, 10)
-        self.font_b = (fam, 10, "bold")
+        self.font_tip = (fam, 9)
+        self.font_badge = (fam, 7, "bold")
 
         root.title("voice")
         root.attributes("-topmost", True)
@@ -132,39 +152,35 @@ class Panel:
         if self.borderless:
             root.overrideredirect(True)
         try:
-            root.geometry("+120+120")
+            root.geometry("+140+140")
         except Exception:
             pass
 
-        self.snd = tk.StringVar()
-        self.mute = tk.StringVar()
-        self.length = tk.StringVar()
-        self.rate = tk.StringVar()
-        self.voice = tk.StringVar()
-        self.alpha_lbl = tk.StringVar()
-
-        self.container = tk.Frame(root)
-        self.container.pack(fill="both", expand=True)
-
-        s = self._read()
+        s = state.load()
         self.orientation = s.get("panelOrientation") or "h"
         self.theme_mode = s.get("panelTheme") or "auto"
         self.alpha = self._coerce_alpha(s.get("panelAlpha"))
         self.recompute_theme()
+
+        self.cv = tk.Canvas(root, highlightthickness=0, bd=0,
+                            bg=self.c["surface"])
+        self.cv.pack(fill="both", expand=True)
+        self.tip = Tip(root)
+
+        self.cv.bind("<Motion>", self.on_motion)
+        self.cv.bind("<Leave>", self.on_leave)
+        self.cv.bind("<ButtonPress-1>", self.on_press)
+        self.cv.bind("<B1-Motion>", self.on_move)
+        self.cv.bind("<ButtonRelease-1>", self.on_release)
+        self.cv.bind("<MouseWheel>", self.on_wheel)
+        self.cv.bind("<Button-4>", lambda e: self.on_wheel(e, +1))
+        self.cv.bind("<Button-5>", lambda e: self.on_wheel(e, -1))
+
         self.apply_window()
-        self.build()
+        self.resize()
         self.sync()
 
-    # ---- stav --------------------------------------------------------------
-    def _read(self):
-        return state.load()
-
-    def _write(self, **kw):
-        s = state.load()
-        s.update(kw)
-        state.save(s)
-        self.sync_now()
-
+    # ---- helpers -----------------------------------------------------------
     @staticmethod
     def _coerce_alpha(v):
         try:
@@ -173,204 +189,294 @@ class Panel:
         except (TypeError, ValueError):
             return 1.0
 
-    # ---- vzhled ------------------------------------------------------------
     def recompute_theme(self):
         dark = detect_dark() if self.theme_mode == "auto" else self.theme_mode == "dark"
         self.c = DARK if dark else LIGHT
 
     def apply_window(self):
-        self.root.configure(bg=self.c["bg"])
+        self.root.configure(bg=self.c["surface"])
         try:
             self.root.attributes("-alpha", self.alpha)
         except Exception:
             pass
-        self.alpha_lbl.set("%d%%" % int(round(self.alpha * 100)))
 
-    def _btn(self, parent, cmd, var=None, text=None, width=None, bold=False):
-        b = tk.Button(parent, command=cmd, relief="flat", bd=0,
-                      padx=8, pady=5, cursor="hand2", highlightthickness=0,
-                      font=self.font_b if bold else self.font,
-                      bg=self.c["btn"], fg=self.c["fg"],
-                      activebackground=self.c["active"],
-                      activeforeground=self.c["fg"])
-        if var is not None:
-            b.config(textvariable=var)
+    def cell_names(self):
+        core = ["power", "mute", "length", "voice", "speed",
+                "theme", "opacity", "orient"]
+        return (["grip"] + core + ["close"]) if self.borderless else core
+
+    def resize(self):
+        n = len(self.cell_names())
+        span = MARGIN * 2 + n * CELL + (n - 1) * GAP
+        thick = MARGIN * 2 + CELL
+        if self.orientation == "v":
+            self.cv.config(width=thick, height=span)
         else:
-            b.config(text=text)
-        if width:
-            b.config(width=width)
-        return b
+            self.cv.config(width=span, height=thick)
 
-    def build(self):
-        for w in self.container.winfo_children():
-            w.destroy()
-        self.container.configure(bg=self.c["bg"])
-
-        vert = self.orientation == "v"
-        side = "top" if vert else "left"
-        pack = {"fill": "x"} if vert else {"fill": "y"}
-        pad = {"padx": 2, "pady": 2}
-
-        def add(w):
-            w.pack(side=side, **pack, **pad)
-
-        # úchyt pro tažení (jen bezrámové okno)
-        if self.borderless:
-            h = tk.Label(self.container, text="≡", bg=self.c["handle"],
-                         fg=self.c["fg"], font=self.font, cursor="fleur",
-                         padx=4, pady=4)
-            h.bind("<Button-1>", self._start_move)
-            h.bind("<B1-Motion>", self._do_move)
-            add(h)
-
-        self.b_power = self._btn(self.container, self.toggle_sound,
-                                 var=self.snd, width=6, bold=True)
-        add(self.b_power)
-
-        self.b_mute = self._btn(self.container, self.cycle_mute,
-                                var=self.mute, width=8, bold=True)
-        add(self.b_mute)
-
-        self.b_len = self._btn(self.container, self.toggle_length,
-                               var=self.length, width=8)
-        add(self.b_len)
-
-        labels = [lbl for lbl, _, _ in self.catalog]
-        om = tk.OptionMenu(self.container, self.voice, *labels,
-                           command=self.pick_voice)
-        om.config(width=12, relief="flat", bd=0, highlightthickness=0,
-                  font=self.font, bg=self.c["btn"], fg=self.c["fg"],
-                  activebackground=self.c["active"],
-                  activeforeground=self.c["fg"],
-                  indicatoron=True, cursor="hand2")
-        om["menu"].config(bg=self.c["sub"], fg=self.c["fg"],
-                          activebackground=self.c["active"],
-                          activeforeground=self.c["fg"], bd=0)
-        self.b_voice = om
-        add(om)
-
-        rate_box = tk.Frame(self.container, bg=self.c["bg"])
-        self._btn(rate_box, lambda: self.bump_rate(-RATE_STEP),
-                  text="−", width=2).pack(side="left", padx=1)
-        tk.Label(rate_box, textvariable=self.rate, width=4, anchor="center",
-                 bg=self.c["sub"], fg=self.c["fg"], font=self.font,
-                 padx=2, pady=4).pack(side="left", padx=1)
-        self._btn(rate_box, lambda: self.bump_rate(+RATE_STEP),
-                  text="+", width=2).pack(side="left", padx=1)
-        add(rate_box)
-
-        self.b_theme = self._btn(self.container, self.cycle_theme,
-                                 text="◑", width=2)
-        add(self.b_theme)
-
-        self.b_alpha = self._btn(self.container, self.cycle_alpha,
-                                 var=self.alpha_lbl, width=5)
-        add(self.b_alpha)
-
-        self.b_orient = self._btn(self.container, self.toggle_orientation,
-                                  text="⇅", width=2)
-        add(self.b_orient)
-
-        if self.borderless:
-            self._btn(self.container, self.root.destroy,
-                      text="×", width=2).pack(side=side, **pack, **pad)
-
-    # ---- tažení okna -------------------------------------------------------
-    def _start_move(self, e):
-        self._ox, self._oy = e.x, e.y
-
-    def _do_move(self, e):
-        self.root.geometry("+%d+%d" % (e.x_root - self._ox, e.y_root - self._oy))
-
-    # ---- akce --------------------------------------------------------------
-    def toggle_sound(self):
-        if self._read().get("enabled"):
-            self._write(enabled=False)
+    def cell_rect(self, i):
+        if self.orientation == "v":
+            x1 = MARGIN
+            y1 = MARGIN + i * (CELL + GAP)
         else:
-            self._write(enabled=True, muteRemaining=0)
+            x1 = MARGIN + i * (CELL + GAP)
+            y1 = MARGIN
+        return x1, y1, x1 + CELL, y1 + CELL
 
-    def cycle_mute(self):
-        cur = int(self._read().get("muteRemaining") or 0)
-        self._write(muteRemaining=_next(cur, MUTE_CYCLE))
+    def cell_at(self, x, y):
+        for i, name in enumerate(self.cell_names()):
+            x1, y1, x2, y2 = self.cell_rect(i)
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return name
+        return None
 
-    def toggle_length(self):
-        cur = self._read().get("summaryLength") or "long"
-        self._write(summaryLength="short" if cur == "long" else "long")
-
-    def pick_voice(self, label):
-        if self._syncing:
-            return
-        full, gender = self.meta_by_label.get(label, (None, None))
-        if full:
-            self._write(voiceName=full, gender=gender)
-
-    def bump_rate(self, delta):
+    # ---- read state for drawing -------------------------------------------
+    def rate_value(self):
         try:
-            cur = float(self._read().get("speakingRate") or 1.0)
+            return float(self.st.get("speakingRate") or 1.0)
         except (TypeError, ValueError):
-            cur = 1.0
-        new = min(RATE_MAX, max(RATE_MIN, cur + delta))
-        new = round(new / RATE_STEP) * RATE_STEP
-        self._write(speakingRate=round(new, 2))
+            return 1.0
 
-    def cycle_theme(self):
-        self.theme_mode = _next(self.theme_mode, THEME_CYCLE)
-        self._write(panelTheme=self.theme_mode)
-        self.recompute_theme()
-        self.apply_window()
-        self.build()
+    # ---- state writes ------------------------------------------------------
+    def write(self, **kw):
+        s = state.load()
+        s.update(kw)
+        state.save(s)
         self.sync_now()
 
-    def cycle_alpha(self):
-        self.alpha = _next(self.alpha, ALPHA_CYCLE)
-        self._write(panelAlpha=self.alpha)
-        self.apply_window()
+    # ---- events ------------------------------------------------------------
+    def on_motion(self, e):
+        name = self.cell_at(e.x, e.y)
+        if name != self.hover:
+            self.hover = name
+            self.draw()
+            self.tip.hide()
+            if self._tip_after:
+                self.root.after_cancel(self._tip_after)
+            if name and name not in ("grip",):
+                self._tip_after = self.root.after(
+                    450, lambda: self.show_tip(name))
 
-    def toggle_orientation(self):
-        self.orientation = "v" if self.orientation == "h" else "h"
-        self._write(panelOrientation=self.orientation)
-        self.build()
-        self.sync_now()
+    def on_leave(self, _e):
+        self.hover = None
+        self.tip.hide()
+        self.draw()
 
-    # ---- synchronizace -----------------------------------------------------
-    def sync_now(self):
-        s = self._read()
-        self._syncing = True
-        try:
-            on = bool(s.get("enabled"))
-            self.snd.set("● ZAP" if on else "● VYP")
-            self.b_power.config(bg=self.c["on"] if on else self.c["off"],
-                                fg=self.c["white"],
-                                activebackground=self.c["on"] if on else self.c["off"],
-                                activeforeground=self.c["white"])
+    def show_tip(self, name):
+        if self.hover != name:
+            return
+        label, value = self.tip_text(name)
+        txt = "%s: %s" % (label, value) if value else label
+        self.tip.show(self.root.winfo_pointerx() + 12,
+                      self.root.winfo_pointery() + 16,
+                      txt, self.c, self.font_tip)
 
-            m = int(s.get("muteRemaining") or 0)
-            if m <= 0:
-                self.mute.set("TICHO")
-                self.b_mute.config(bg=self.c["btn"], fg=self.c["fg"],
-                                   activebackground=self.c["active"],
-                                   activeforeground=self.c["fg"])
+    def on_press(self, e):
+        self._press = self.cell_at(e.x, e.y)
+        if self._press == "grip":
+            self._drag = (e.x_root, e.y_root,
+                          self.root.winfo_x(), self.root.winfo_y())
+
+    def on_move(self, e):
+        if self._drag:
+            ox, oy, wx, wy = self._drag
+            self.root.geometry("+%d+%d" % (wx + e.x_root - ox,
+                                           wy + e.y_root - oy))
+
+    def on_release(self, e):
+        if self._drag:
+            self._drag = None
+            return
+        name = self.cell_at(e.x, e.y)
+        if name and name == getattr(self, "_press", None):
+            self.dispatch(name, e)
+        self._press = None
+
+    def on_wheel(self, e, direction=None):
+        if self.cell_at(e.x, e.y) != "speed":
+            return
+        if direction is None:
+            direction = 1 if getattr(e, "delta", 0) > 0 else -1
+        cur = self.rate_value()
+        new = min(RATE_MAX, max(RATE_MIN, cur + direction * RATE_STEP))
+        self.write(speakingRate=round(round(new / RATE_STEP) * RATE_STEP, 2))
+
+    def dispatch(self, name, e):
+        if name == "power":
+            if self.st.get("enabled"):
+                self.write(enabled=False)
             else:
-                self.mute.set("TICHO ∞" if m >= 100000 else "TICHO %d" % m)
-                self.b_mute.config(bg=self.c["mute"], fg=self.c["white"],
-                                   activebackground=self.c["mute"],
-                                   activeforeground=self.c["white"])
+                self.write(enabled=True, muteRemaining=0)
+        elif name == "mute":
+            self.write(muteRemaining=_next(int(self.st.get("muteRemaining") or 0),
+                                           MUTE_CYCLE))
+        elif name == "length":
+            cur = self.st.get("summaryLength") or "long"
+            self.write(summaryLength="short" if cur == "long" else "long")
+        elif name == "voice":
+            self.voice_menu(e)
+        elif name == "speed":
+            self.write(speakingRate=round(_next(self.rate_value(), RATE_CYCLE), 2))
+        elif name == "theme":
+            self.theme_mode = _next(self.theme_mode, THEME_CYCLE)
+            self.recompute_theme()
+            self.cv.config(bg=self.c["surface"])
+            self.write(panelTheme=self.theme_mode)
+        elif name == "opacity":
+            self.alpha = _next(self.alpha, ALPHA_CYCLE)
+            self.apply_window()
+            self.write(panelAlpha=self.alpha)
+        elif name == "orient":
+            self.orientation = "v" if self.orientation == "h" else "h"
+            self.resize()
+            self.write(panelOrientation=self.orientation)
+        elif name == "close":
+            self.root.destroy()
 
+    def voice_menu(self, e):
+        m = tk.Menu(self.root, tearoff=0, bg=self.c["menu_bg"],
+                    fg=self.c["menu_fg"], activebackground=self.c["menu_act"],
+                    activeforeground=self.c["menu_fg"], bd=0)
+        cur = self.st.get("voiceName") or voices.voice_for_gender(
+            self.st.get("gender") or "")
+        for lbl, full, g in self.catalog:
+            mark = "● " if full == cur else "   "
+            m.add_command(label=mark + lbl,
+                          command=lambda f=full, gg=g: self.write(
+                              voiceName=f, gender=gg))
+        m.tk_popup(e.x_root, e.y_root)
+
+    # ---- tooltip text ------------------------------------------------------
+    def tip_text(self, name):
+        s = self.st
+        if name == "power":
+            return "Zvuk", "zapnuto" if s.get("enabled") else "vypnuto"
+        if name == "mute":
+            m = int(s.get("muteRemaining") or 0)
+            v = "vypnuto" if m <= 0 else ("do odvolání" if m >= 100000
+                                          else "%d tahů" % m)
+            return "Ztlumit", v
+        if name == "length":
             short = (s.get("summaryLength") or "long") == "short"
-            self.length.set("KRÁTKÉ" if short else "DLOUHÉ")
-
-            try:
-                r = float(s.get("speakingRate") or 1.0)
-            except (TypeError, ValueError):
-                r = 1.0
-            self.rate.set("%g×" % round(r, 2))
-
+            return "Délka", "krátké" if short else "dlouhé"
+        if name == "voice":
             full = s.get("voiceName") or voices.voice_for_gender(s.get("gender") or "")
-            lbl = self.label_by_full.get(full)
-            if lbl and lbl != self.voice.get():
-                self.voice.set(lbl)
-        finally:
-            self._syncing = False
+            return "Hlas", self.label_by_full.get(full, "—")
+        if name == "speed":
+            return "Tempo", "%g×" % round(self.rate_value(), 2)
+        if name == "theme":
+            return "Téma", {"auto": "auto", "dark": "tmavé",
+                            "light": "světlé"}[self.theme_mode]
+        if name == "opacity":
+            return "Průhlednost", "%d %%" % int(round(self.alpha * 100))
+        if name == "orient":
+            return "Orientace", "svisle" if self.orientation == "v" else "vodorovně"
+        if name == "close":
+            return "Zavřít", ""
+        return name, ""
+
+    # ---- kreslení ----------------------------------------------------------
+    def _round(self, x1, y1, x2, y2, r, **kw):
+        pts = [x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r, x2, y2 - r, x2, y2,
+               x2 - r, y2, x1 + r, y2, x1, y2, x1, y2 - r, x1, y1 + r, x1, y1]
+        return self.cv.create_polygon(pts, smooth=True, **kw)
+
+    def draw(self):
+        c = self.cv
+        c.delete("all")
+        for i, name in enumerate(self.cell_names()):
+            x1, y1, x2, y2 = self.cell_rect(i)
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+            if name == self.hover and name != "grip":
+                self._round(x1 + 1, y1 + 1, x2 - 1, y2 - 1, RAD,
+                            fill=self.c["elevate"], outline="")
+            self.draw_icon(name, cx, cy, x2, y2)
+
+    def draw_icon(self, name, cx, cy, x2, y2):
+        c = self.cv
+        col = self.c
+        fg, accent = col["fg"], col["accent"]
+        s = self.st
+
+        if name == "grip":
+            for dx in (-3, 3):
+                for dy in (-7, 0, 7):
+                    c.create_oval(cx + dx - 1, cy + dy - 1, cx + dx + 1,
+                                  cy + dy + 1, fill=col["dim"], outline="")
+        elif name == "power":
+            on = bool(s.get("enabled"))
+            cc = col["on"] if on else col["off"]
+            c.create_arc(cx - 9, cy - 9, cx + 9, cy + 9, start=112, extent=316,
+                         style="arc", outline=cc, width=2)
+            c.create_line(cx, cy - 11, cx, cy - 1, fill=cc, width=2,
+                          capstyle="round")
+        elif name == "mute":
+            m = int(s.get("muteRemaining") or 0)
+            active = m > 0
+            cc = col["amber"] if active else fg
+            c.create_polygon(cx - 8, cy - 3, cx - 3, cy - 3, cx + 1, cy - 8,
+                             cx + 1, cy + 8, cx - 3, cy + 3, cx - 8, cy + 3,
+                             fill=cc, outline=cc)
+            if active:
+                c.create_line(cx - 9, cy + 9, cx + 9, cy - 9, fill=cc, width=2,
+                              capstyle="round")
+                badge = "∞" if m >= 100000 else str(m)
+                c.create_text(x2 - 6, y2 - 7, text=badge, fill=col["amber"],
+                              font=self.font_badge)
+            else:
+                for k, rr in ((1, 4), (2, 8)):
+                    c.create_arc(cx + 2 - rr, cy - rr, cx + 2 + rr, cy + rr,
+                                 start=-55, extent=110, style="arc",
+                                 outline=cc, width=1)
+        elif name == "length":
+            short = (s.get("summaryLength") or "long") == "short"
+            rows = [(-3, 8), (3, 4)] if short else [(-8, 9), (-3, 9), (2, 7),
+                                                    (7, 5)]
+            for dy, w in rows:
+                c.create_line(cx - 8, cy + dy, cx - 8 + w + 6, cy + dy,
+                              fill=fg, width=2, capstyle="round")
+        elif name == "voice":
+            c.create_oval(cx - 4, cy - 9, cx + 4, cy - 1, fill=fg, outline=fg)
+            c.create_arc(cx - 8, cy + 1, cx + 8, cy + 16, start=0, extent=180,
+                         style="arc", outline=fg, width=2)
+        elif name == "speed":
+            c.create_arc(cx - 9, cy - 7, cx + 9, cy + 11, start=20, extent=140,
+                         style="arc", outline=fg, width=2)
+            c.create_line(cx, cy + 2, cx + 6, cy - 5, fill=accent, width=2,
+                          capstyle="round")
+            c.create_text(cx, cy + 9, text="%g×" % round(self.rate_value(), 2),
+                          fill=col["dim"], font=self.font_badge)
+        elif name == "theme":
+            c.create_oval(cx - 9, cy - 9, cx + 9, cy + 9, outline=fg, width=2)
+            c.create_arc(cx - 9, cy - 9, cx + 9, cy + 9, start=-90, extent=180,
+                         fill=fg, outline=fg)
+            if self.theme_mode != "auto":
+                c.create_oval(cx + 5, cy - 11, cx + 10, cy - 6,
+                              fill=accent, outline="")
+        elif name == "opacity":
+            c.create_rectangle(cx - 8, cy - 8, cx + 8, cy + 8, outline=fg,
+                               width=2)
+            fillh = int(16 * self.alpha)
+            if fillh > 0:
+                c.create_rectangle(cx - 8, cy + 8 - fillh, cx + 8, cy + 8,
+                                   fill=accent, outline="")
+            if self.alpha < 0.999:
+                c.create_text(cx, cy + 13, text="%d%%" % int(self.alpha * 100),
+                              fill=col["dim"], font=self.font_badge)
+        elif name == "orient":
+            c.create_line(cx - 7, cy - 4, cx + 7, cy - 4, fill=fg, width=2,
+                          arrow="both", capstyle="round")
+            c.create_line(cx - 7, cy + 4, cx + 7, cy + 4, fill=fg, width=2,
+                          arrow="both", capstyle="round")
+        elif name == "close":
+            for a, b in (((-6, -6), (6, 6)), ((-6, 6), (6, -6))):
+                c.create_line(cx + a[0], cy + a[1], cx + b[0], cy + b[1],
+                              fill=col["dim"], width=2, capstyle="round")
+
+    # ---- sync --------------------------------------------------------------
+    def sync_now(self):
+        self.st = state.load()
+        self.draw()
 
     def sync(self):
         self.sync_now()
@@ -383,8 +489,7 @@ def main():
     except tk.TclError as e:
         sys.stderr.write(
             "Nepodařilo se otevřít okno (%s).\n"
-            "Na WSL potřebuješ Windows 11 s WSLg (grafika ve WSL2).\n" % e
-        )
+            "Na WSL potřebuješ Windows 11 s WSLg.\n" % e)
         sys.exit(1)
     Panel(root)
     root.mainloop()

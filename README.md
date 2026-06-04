@@ -168,24 +168,27 @@ max. délka **1500** znaků.
 
 ## Plovoucí panel (ovládání myší)
 
-Když nechceš psát příkazy, spusť **mini-appku** — malou lištu, která **leží nad
-terminálem (always-on-top)** a ovládáš ji **myší**. Klik se hned uloží do stejného
-stavu, který čte plugin, takže panel, `/speak` i hlas jsou pořád synchronní (panel se
-sám aktualizuje ~1×/s).
+Když nechceš psát příkazy, spusť **mini-appku** — kompaktní **ikonovou lištu**, která
+**leží nad terminálem (always-on-top)** a ovládáš ji **myší**. Ikony jsou vlastní
+vektorové (Material styl, kreslené na canvasu) — **bez závislostí navíc**, jen Tkinter.
+Klik se hned uloží do stejného stavu, který čte plugin, takže panel, `/speak` i hlas
+jsou pořád synchronní (panel se sám aktualizuje ~1×/s). Popisek každé ikony se ukáže
+jako **tooltip** při najetí myší.
 
-```
-[≡] [● ZAP] [TICHO] [DLOUHÉ] [žena · Aoede ▾] [− 1× +] [◑] [100%] [⇅] [×]
-```
+Ikony zleva doprava:
 
-- **● ZAP / VYP** — zap/vyp (zelená/červená)
-- **TICHO** — ztlumení **na první klik**; cykluje **1 → 3 → ∞ tahů → vyp** (jantarová, ukazuje zbývající počet), pak se hlas sám zapne
-- **DLOUHÉ / KRÁTKÉ** — délka shrnutí
-- **žena · Aoede ▾** — výběr hlasu
-- **− 1× +** — tempo
-- **◑** — téma: **auto (dle OS) → dark → light** (automatický dark mode dle Windows/macOS/GNOME)
-- **100%** — průhlednost: **100 → 75 → 50 %**
-- **⇅** — orientace **vodorovně ↔ svisle** (pamatuje se)
-- **≡** táhnout oknem, **×** zavřít (bezrámové okno; na macOS nativní lišta)
+| Ikona | Co dělá |
+|---|---|
+| ⠿ | úchyt — táhni pro přesun okna |
+| ⏻ | **zvuk** zap/vyp (zelená = zapnuto, červená = vypnuto) |
+| 🔇 | **ztlumit** na první klik: **1 → 3 → ∞ tahů → vyp** (jantarová + počet), pak se sám zapne |
+| ☰ | **délka** shrnutí: krátké ↔ dlouhé |
+| 👤 | **hlas** — klik otevře nabídku českých Chirp 3 HD hlasů |
+| ◔ | **tempo** — klik cykluje (0.75–2×), kolečko myši jemně ±0.25 |
+| ◑ | **téma** — auto (dle OS) → tmavé → světlé (automatický dark mode) |
+| ▣ | **průhlednost** — 100 → 75 → 50 % |
+| ⇅ | **orientace** — vodorovně ↔ svisle |
+| ✕ | zavřít (bezrámové okno; na macOS nativní lišta) |
 
 Vzhled se ukládá do stavu (`panelTheme`, `panelAlpha`, `panelOrientation`), takže se
 panel otevře tak, jak jsi ho nechal.
