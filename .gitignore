@@ -1,0 +1,6 @@
+# voice-claude runtime / lokální artefakty
+*.wav
+*.log
+__pycache__/
+*.pyc
+.DS_Store
