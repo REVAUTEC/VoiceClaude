@@ -19,12 +19,17 @@ RETRYABLE = {429, 500, 502, 503, 504}
 
 
 def getkey():
-    for k in ("CLAUDE_PLUGIN_OPTION_GOOGLEAPIKEY",
-              "CLAUDE_PLUGIN_OPTION_GOOGLE_API_KEY",
-              "GOOGLE_API_KEY"):
-        v = os.environ.get(k)
-        if v:
-            return v
+    # Přímá proměnná prostředí má přednost.
+    if os.environ.get("GOOGLE_API_KEY"):
+        return os.environ["GOOGLE_API_KEY"]
+    # Klíč z userConfig: Claude Code nezaručuje casing názvu proměnné
+    # (GOOGLEAPIKEY / GOOGLE_API_KEY / googleApiKey …), proto hledáme libovolnou
+    # CLAUDE_PLUGIN_OPTION_* proměnnou, jejíž název odpovídá 'googleapikey'.
+    for name, val in os.environ.items():
+        if val and name.startswith("CLAUDE_PLUGIN_OPTION_"):
+            norm = name[len("CLAUDE_PLUGIN_OPTION_"):].replace("_", "").lower()
+            if norm == "googleapikey":
+                return val
     return ""
 
 
