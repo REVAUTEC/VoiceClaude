@@ -16,9 +16,16 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
 {
   payload="$(cat)"
 
-  [ "$(st get enabled true)" = "true" ] || exit 0
+  # Úklid starých audio souborů na začátku každého tahu (proběhne i při early-exitu).
+  find "$RUN" -name 'out.*.wav' -mmin +5 -delete 2>/dev/null
 
-  mute="$(st get muteRemaining 0)"
+  # Stav přečteme JEDNÍM voláním (hot path běží po každém tahu) a parsujeme jq.
+  st_json="$(st getjson)"
+  sv() { printf '%s' "$st_json" | jq -r "$1" 2>/dev/null; }
+
+  [ "$(sv '.enabled')" = "true" ] || exit 0
+
+  mute="$(sv '.muteRemaining // 0')"
   case "$mute" in ''|*[!0-9]*) mute=0 ;; esac
   if [ "$mute" -gt 0 ]; then
     st dec muteRemaining >/dev/null
@@ -39,18 +46,20 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
 
   [ -n "$text" ] || { log "žádné <voice> shrnutí → ticho"; exit 0; }
 
-  export VC_VOICE; VC_VOICE="$(st get voiceName "${CLAUDE_PLUGIN_OPTION_VOICENAME:-cs-CZ-Chirp3-HD-Achernar}")"
-  export VC_LANG;  VC_LANG="$(st get languageCode "${CLAUDE_PLUGIN_OPTION_LANGUAGECODE:-cs-CZ}")"
-  export VC_RATE;  VC_RATE="$(st get speakingRate "${CLAUDE_PLUGIN_OPTION_SPEAKINGRATE:-1.0}")"
+  vn="$(sv '.voiceName // empty')"; lc="$(sv '.languageCode // empty')"; sr="$(sv '.speakingRate // empty')"
+  export VC_VOICE="${vn:-${CLAUDE_PLUGIN_OPTION_VOICENAME:-cs-CZ-Chirp3-HD-Achernar}}"
+  export VC_LANG="${lc:-${CLAUDE_PLUGIN_OPTION_LANGUAGECODE:-cs-CZ}}"
+  export VC_RATE="${sr:-${CLAUDE_PLUGIN_OPTION_SPEAKINGRATE:-1.0}}"
   export VC_MAXCHARS="${CLAUDE_PLUGIN_OPTION_MAXCHARS:-1200}"
 
   out="$RUN/out.$$.wav"
   res="$(printf '%s' "$text" | timeout 20 "$PY" "$ROOT/scripts/tts.py" "$out" 2>>"$LOG")"
   case "$res" in
     OK*)
-      st set lastError "" >/dev/null
+      [ -n "$(sv '.lastError // empty')" ] && st set lastError "" >/dev/null
       if [ -f "$RUN/play.pid" ]; then
-        kill "$(cat "$RUN/play.pid" 2>/dev/null)" 2>/dev/null
+        oldpid="$(cat "$RUN/play.pid" 2>/dev/null)"
+        case "$oldpid" in ''|*[!0-9]*) ;; *) kill "$oldpid" 2>/dev/null ;; esac
       fi
       setsid "$ROOT/scripts/play.sh" "$out" </dev/null >/dev/null 2>&1 &
       echo $! > "$RUN/play.pid"
@@ -62,7 +71,6 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
       ;;
   esac
 
-  find "$RUN" -name 'out.*.wav' -mmin +5 -delete 2>/dev/null
   exit 0
 } >>"$LOG" 2>&1
 

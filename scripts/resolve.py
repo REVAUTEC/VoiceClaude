@@ -16,7 +16,9 @@ import json
 
 MAXCHARS = 1200
 try:
-    MAXCHARS = int(os.environ.get("VC_MAXCHARS") or MAXCHARS)
+    _m = int(os.environ.get("VC_MAXCHARS") or MAXCHARS)
+    if _m > 0:  # záporné/nulové by přes text[:MAXCHARS] uřízlo konec nebo vše
+        MAXCHARS = _m
 except ValueError:
     pass
 

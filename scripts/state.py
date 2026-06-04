@@ -10,6 +10,7 @@ Použití:
 import sys
 import os
 import json
+import math
 import tempfile
 
 STATE_DIR = os.path.join(
@@ -65,9 +66,12 @@ def coerce(v):
         return int(v)
     except ValueError:
         try:
-            return float(v)
+            f = float(v)
         except ValueError:
             return v
+        # inf/nan by se uložily jako neplatný JSON (Infinity/NaN) a rozbily jq
+        # čtení stavu v hooku → ponecháme jako řetězec.
+        return f if math.isfinite(f) else v
 
 
 def main():
@@ -77,6 +81,8 @@ def main():
     cmd = args[0]
     state = load()
     if cmd == "get":
+        if len(args) < 2:
+            return
         key = args[1]
         default = args[2] if len(args) > 2 else ""
         v = state.get(key)
@@ -89,9 +95,13 @@ def main():
     elif cmd == "getjson":
         print(json.dumps(state, ensure_ascii=False))
     elif cmd == "set":
+        if len(args) < 3:
+            return
         state[args[1]] = coerce(args[2])
         save(state)
     elif cmd == "dec":
+        if len(args) < 2:
+            return
         try:
             cur = int(state.get(args[1]) or 0)
         except (TypeError, ValueError):

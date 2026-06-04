@@ -28,6 +28,7 @@ plugin je jen **výstup**.
 
 - Claude Code s podporou pluginů (testováno na 2.1.161).
 - **Python 3** (jen standardní knihovna — nic se nepipuje).
+- **`jq`** (Stop hook jím parsuje stav a odpověď).
 - Audio přehrávač: `pw-play` / `paplay` / `aplay` / `ffplay` / `mpv`.
 - **Google API klíč** s přístupem k **Cloud Text-to-Speech API**.
 

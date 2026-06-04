@@ -7,9 +7,10 @@ bad() { printf '  ❌ %s\n' "$*"; }
 
 echo "voice-claude doctor:"
 command -v "$PY" >/dev/null 2>&1 && ok "python3" || bad "python3 chybí"
+command -v jq >/dev/null 2>&1 && ok "jq" || bad "jq chybí (nutné pro Stop hook — čtení stavu a odpovědi)"
 
 P=""
-for p in pw-play paplay aplay ffplay mpv mpg123; do
+for p in pw-play paplay aplay ffplay mpv; do
   if command -v "$p" >/dev/null 2>&1; then P="$p"; break; fi
 done
 [ -n "$P" ] && ok "přehrávač: $P" || bad "žádný přehrávač (nainstaluj mpv nebo pw-play/aplay)"

@@ -9,6 +9,7 @@ Stdout: 'OK bytes=N' nebo 'ERR ...'. Exit 0 = OK, jinak nenulový.
 import sys
 import os
 import json
+import math
 import time
 import base64
 import urllib.request
@@ -35,6 +36,9 @@ try:
     RATE = float(os.environ.get("VC_RATE") or 1.0)
 except ValueError:
     RATE = 1.0
+if not math.isfinite(RATE):  # inf/nan by se serializovaly jako neplatný JSON → 400
+    RATE = 1.0
+RATE = max(0.25, min(2.0, RATE))  # Google akceptuje jen tento rozsah
 
 
 def redact(s):
