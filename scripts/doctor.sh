@@ -27,6 +27,29 @@ else
   bad "žádný použitelný přehrávač (nainstaluj pulseaudio-utils → paplay, nebo ffmpeg → ffplay)"
 fi
 
+# Plovoucí panel (/speak panel). Ve WSL běží nativně Windows Pythonem (kvůli
+# always-on-top nad Warpem); na Linuxu/macOS lokálním Pythonem.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+  winpy="$(command -v python.exe 2>/dev/null || command -v py.exe 2>/dev/null)"
+  if [ -n "$winpy" ]; then
+    ok "panel (WSL): Windows Python — $("$winpy" --version 2>&1 | tr -d '\r')"
+    "$winpy" -c "import tkinter" 2>/dev/null \
+      || bad "Windows Python nemá tkinter (přeinstaluj Python z python.org s tcl/tk)"
+    "$winpy" -c "import PIL" 2>/dev/null \
+      || printf '  ℹ️  %s\n' "hladké ikony: 'python.exe -m pip install pillow' (volitelné)"
+  else
+    bad "panel (WSL): chybí Windows Python (python.exe). Nainstaluj Python pro Windows (python.org / Microsoft Store) — bez něj panel nedrží nad Warpem."
+  fi
+else
+  if "$PY" -c "import tkinter" 2>/dev/null; then
+    ok "panel: tkinter"
+    "$PY" -c "import PIL" 2>/dev/null \
+      || printf '  ℹ️  %s\n' "hladké ikony: 'pip install pillow' (volitelné)"
+  else
+    bad "panel: chybí tkinter (Ubuntu: sudo apt install python3-tk; macOS: brew install python-tk)"
+  fi
+fi
+
 keyfound="$("$PY" - <<'PYEOF'
 import os
 def has():

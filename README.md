@@ -74,11 +74,21 @@ plugin je jen **výstup**.
 
 ## Požadavky
 
+Pro **mluvení** (jádro pluginu):
+
 - Claude Code s podporou pluginů (testováno na 2.1.161).
-- **Python 3** (jen standardní knihovna — nic se nepipuje).
+- **Python 3** (jádro jede jen na standardní knihovně — nic se nepipuje).
 - **`jq`** (Stop hook jím parsuje stav a odpověď).
-- Audio přehrávač: `pw-play` / `paplay` / `aplay` / `ffplay` / `mpv`.
+- Audio přehrávač: `pw-play` / `paplay` / `aplay` / `ffplay` / `mpv` (ve WSLg je nejčistší `paplay` z `pulseaudio-utils`).
 - **Google API klíč** s přístupem k **Cloud Text-to-Speech API**.
+
+Pro **plovoucí panel** (volitelné, viz [Plovoucí panel](#plovoucí-panel-ovládání-myší)):
+
+- **Ubuntu/Linux:** `python3-tk` (+ volitelně `python3-pil` pro hladké ikony).
+- **macOS:** Tkinter v Pythonu (+ volitelně Pillow).
+- **Windows + WSL:** **Python pro Windows** (panel běží nativně kvůli always-on-top).
+
+Vše pro panel ti zkontroluje `/speak doctor`.
 
 ## Setup klíče (jednorázově)
 
@@ -188,23 +198,26 @@ Ikony zleva doprava:
 | ◑ | **téma** — auto (dle OS) → tmavé → světlé (automatický dark mode) |
 | ▣ | **průhlednost** — 100 → 75 → 50 % |
 | ⇅ | **orientace** — vodorovně ↔ svisle |
+| 📌 | **vždy navrchu** zap/vyp (špendlík: plný = zapnuto, obrys = vypnuto) |
 | ✕ | zavřít (bezrámové okno; na macOS nativní lišta) |
 
 Vzhled se ukládá do stavu (`panelTheme`, `panelAlpha`, `panelOrientation`), takže se
 panel otevře tak, jak jsi ho nechal.
 
-Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/panel.py" &`.
+**Spuštění:** `/speak panel` (doporučeno — spouštěč si vyřeší správný Python i cesty
+sám). `/speak doctor` zkontroluje, že máš pro panel vše potřebné.
 
-**Požadavky (Tkinter, je v Pythonu):**
-- **Ubuntu / WSL:** `sudo apt install python3-tk`
-- **Windows 11 + WSL:** okno se ukáže díky **WSLg** (WSL2 ve Win 11). Na Win 10 bez WSLg
-  Linux GUI nevyjede.
-- **macOS:** Tkinter bývá součástí Pythonu (případně `brew install python-tk`).
+**Co doinstalovat (podle platformy):**
+
+| Platforma | Panel běží | Instalace |
+|---|---|---|
+| **Ubuntu / Linux** | lokální Python | `sudo apt install python3-tk python3-pil` |
+| **macOS** | lokální Python | Tkinter bývá v Pythonu (jinak `brew install python-tk`); ikony: `pip install pillow` |
+| **Windows + WSL** | **nativní Windows Python** (kvůli always-on-top, viz níže) | nainstaluj **Python pro Windows** (python.org / Microsoft Store); ikony: `python.exe -m pip install pillow` |
 
 **Hladké ikony (volitelné):** s **Pillow** se ikony vykreslí anti-aliasovaně
-(supersampling) — `pip install pillow` (nebo `sudo apt install python3-pil`). Bez
-Pillow se použijí jednodušší vektorové ikony kreslené přímo na canvasu (panel
-funguje i tak).
+(supersampling). Bez Pillow se použijí jednodušší vektorové ikony kreslené přímo na
+canvasu — panel funguje i tak.
 
 **Always-on-top ve Windows/WSL:** WSLg okno (Linux GUI přes RAIL) **neumí držet
 topmost nad nativními Windows okny** (Warp, Windows Terminal…) — z Linux strany se to
@@ -281,8 +294,9 @@ scripts/
   tts.py             # Google Cloud TTS (jen stdlib)
   state.py           # atomický stav v ~/.config/voice-claude/state.json
   voices.py          # české Chirp 3 HD hlasy + mapování pohlaví → jméno
-  panel.py           # plovoucí ovládací panel (Tkinter, always-on-top, H/V)
-  speakctl.sh        # logika /speak
+  panel.py           # plovoucí ikonový panel (Tkinter; AA ikony přes volitelný
+                     #   Pillow; dark/light, průhlednost, H/V, always-on-top)
+  speakctl.sh        # logika /speak (vč. spuštění panelu — ve WSL Windows Pythonem)
   doctor.sh          # diagnostika
   play.sh            # přehrávač audia
 ```
