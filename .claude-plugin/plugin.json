@@ -2,7 +2,7 @@
   "name": "voice-claude",
   "displayName": "voice-claude",
   "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), česky.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": {
     "name": "REVAUTEC"
   },

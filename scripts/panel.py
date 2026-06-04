@@ -18,6 +18,7 @@ Win 11 (WSLg), Ubuntu, macOS. Potřebuje Tkinter:
 import os
 import sys
 import shutil
+import base64
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -114,6 +115,59 @@ def _next(value, cycle):
         if same:
             return cycle[(i + 1) % len(cycle)]
     return cycle[0]
+
+
+# Titulek okna — slouží k vyhledání RAIL okna panelu na Windows straně (WSLg).
+WIN_MARKER = "voice-claude panel"
+
+
+def is_wsl():
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return True
+    try:
+        with open("/proc/version", encoding="utf-8", errors="ignore") as f:
+            return "microsoft" in f.read().lower()
+    except Exception:
+        return False
+
+
+def _powershell_exe():
+    exe = shutil.which("powershell.exe")
+    if exe:
+        return exe
+    cand = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+    return cand if os.path.exists(cand) else None
+
+
+_PIN_PS = '''$ErrorActionPreference='SilentlyContinue'
+Add-Type @"
+using System;using System.Runtime.InteropServices;using System.Text;
+public class WT{
+ public delegate bool E(IntPtr h,IntPtr l);
+ [DllImport("user32.dll")] public static extern bool EnumWindows(E cb,IntPtr l);
+ [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);
+ [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h,IntPtr a,int x,int y,int cx,int cy,uint f);
+ public static void Pin(string m){EnumWindows((h,l)=>{if(IsWindowVisible(h)){var sb=new StringBuilder(512);GetWindowText(h,sb,512);if(sb.ToString().IndexOf(m,StringComparison.OrdinalIgnoreCase)>=0){SetWindowPos(h,(IntPtr)(-1),0,0,0,0,0x13);}}return true;},IntPtr.Zero);}
+}
+"@
+[WT]::Pin("%s")''' % WIN_MARKER
+
+
+def pin_windows_topmost():
+    """Ve WSLg dá RAIL oknu panelu skutečný Windows-level topmost (WS_EX_TOPMOST)
+    přes powershell.exe → drží i nad nativními Windows okny (Warp aj.).
+    Best-effort: když powershell není / nejsme ve WSL, tiše nedělá nic."""
+    exe = _powershell_exe()
+    if not exe:
+        return
+    try:
+        enc = base64.b64encode(_PIN_PS.encode("utf-16-le")).decode()
+        subprocess.Popen([exe, "-NoProfile", "-NonInteractive",
+                          "-EncodedCommand", enc],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
 
 
 def render_icon(name, px, primary, accent, mode="auto", fill=1.0):
@@ -213,7 +267,11 @@ class Panel:
         self.catalog = voice_catalog()
         self.label_by_full = {full: lbl for lbl, full, _ in self.catalog}
         self.meta_by_label = {lbl: (full, g) for lbl, full, g in self.catalog}
-        self.borderless = sys.platform != "darwin"
+        # macOS: nativní lišta. VC_PANEL_TITLED=1 vynutí okno s lištou i jinde
+        # (pomáhá, když by ve WSLg bezrámové okno nešlo spárovat pro topmost).
+        self.borderless = sys.platform != "darwin" and \
+            not os.environ.get("VC_PANEL_TITLED")
+        self._wsl = is_wsl()
         self.hover = None
         self.st = {}
         self._drag = None
@@ -225,7 +283,7 @@ class Panel:
         self.font_tip = (fam, 9)
         self.font_badge = (fam, 7, "bold")
 
-        root.title("voice")
+        root.title(WIN_MARKER)
         root.attributes("-topmost", True)
         root.resizable(False, False)
         if self.borderless:
@@ -258,6 +316,12 @@ class Panel:
         self.apply_window()
         self.resize()
         self.sync()
+
+        # Ve WSLg nestačí X11 -topmost vůči nativním Windows oknům (Warp atd.) —
+        # po vykreslení RAIL okna mu nastavíme skutečný Windows topmost.
+        if self._wsl:
+            for delay in (700, 2000, 4500):
+                root.after(delay, pin_windows_topmost)
 
     # ---- helpers -----------------------------------------------------------
     @staticmethod
