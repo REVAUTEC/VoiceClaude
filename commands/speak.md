@@ -1,6 +1,6 @@
 ---
-description: Ovládá voice-claude (předčítání odpovědí) — status/on/off/mute/voice/rate/doctor
-argument-hint: "[status | on | off | mute <n> | voice <jméno> | rate <0.25-2.0> | doctor]"
+description: Ovládá voice-claude (předčítání odpovědí) — status/on/off/short/long/voice/rate/panel/doctor
+argument-hint: "[status | on | off | toggle | short | long | mute <n> | voice <jméno> | rate <0.25-2.0> | panel | doctor]"
 allowed-tools: Bash
 ---
 

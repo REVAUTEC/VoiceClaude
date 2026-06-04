@@ -33,6 +33,10 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
     exit 0
   fi
 
+  # Délka shrnutí: "short" = jen 1. věta, "long" = celé <voice>.
+  sl="$(sv '.summaryLength // empty')"
+  export VC_SUMMARY="${sl:-long}"
+
   text=""
   msg="$(printf '%s' "$payload" | jq -r '.last_assistant_message // empty' 2>/dev/null)"
   if [ -n "$msg" ]; then
