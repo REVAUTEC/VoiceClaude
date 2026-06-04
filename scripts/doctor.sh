@@ -15,11 +15,27 @@ for p in pw-play paplay aplay ffplay mpv; do
 done
 [ -n "$P" ] && ok "přehrávač: $P" || bad "žádný přehrávač (nainstaluj mpv nebo pw-play/aplay)"
 
-if [ -n "${CLAUDE_PLUGIN_OPTION_GOOGLEAPIKEY:-}${CLAUDE_PLUGIN_OPTION_GOOGLE_API_KEY:-}${GOOGLE_API_KEY:-}" ]; then
-  ok "API klíč v env (nalezen)"
-else
-  bad "API klíč nenalezen (userConfig googleApiKey nebo env GOOGLE_API_KEY)"
-fi
+keyfound="$("$PY" - <<'PYEOF'
+import os
+def has():
+    if os.environ.get("GOOGLE_API_KEY"):
+        return True
+    for n, v in os.environ.items():
+        if v and n.startswith("CLAUDE_PLUGIN_OPTION_") \
+                and n[len("CLAUDE_PLUGIN_OPTION_"):].replace("_", "").lower() == "googleapikey":
+            return True
+    return False
+print("yes" if has() else "no")
+PYEOF
+)"
+[ "$keyfound" = "yes" ] && ok "API klíč nalezen" \
+  || bad "API klíč nenalezen (zadej googleApiKey při instalaci pluginu, nebo nastav env GOOGLE_API_KEY)"
+# Diagnostika: které plugin-option proměnné tento podproces vidí (jen názvy, ne hodnoty).
+"$PY" - <<'PYEOF'
+import os
+ks = sorted(k for k in os.environ if k.startswith("CLAUDE_PLUGIN_OPTION_"))
+print("  plugin options v env:", (", ".join(ks) if ks else "(žádné — userConfig se do tohoto podprocesu nepředává)"))
+PYEOF
 
 echo "  stav: $("$PY" "$ROOT/scripts/state.py" getjson 2>/dev/null)"
 le="$("$PY" "$ROOT/scripts/state.py" get lastError "" 2>/dev/null)"
