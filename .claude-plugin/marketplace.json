@@ -1,0 +1,23 @@
+{
+  "name": "voice-claude",
+  "owner": {
+    "name": "Smartweby",
+    "email": "info@smartweby.cz"
+  },
+  "plugins": [
+    {
+      "name": "voice-claude",
+      "source": "./",
+      "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), primárně česky.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Smartweby",
+        "email": "info@smartweby.cz"
+      },
+      "homepage": "https://github.com/revautec/voiceclaude",
+      "repository": "https://github.com/revautec/voiceclaude",
+      "license": "MIT",
+      "keywords": ["tts", "text-to-speech", "voice", "google-cloud", "cs-CZ"]
+    }
+  ]
+}

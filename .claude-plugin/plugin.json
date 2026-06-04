@@ -1,0 +1,56 @@
+{
+  "name": "voice-claude",
+  "displayName": "voice-claude",
+  "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), primárně česky.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Smartweby",
+    "email": "info@smartweby.cz"
+  },
+  "homepage": "https://github.com/revautec/voiceclaude",
+  "repository": "https://github.com/revautec/voiceclaude",
+  "license": "MIT",
+  "keywords": ["tts", "text-to-speech", "voice", "google-cloud", "cs-CZ", "chirp"],
+  "hooks": "./hooks/hooks.json",
+  "userConfig": {
+    "googleApiKey": {
+      "type": "string",
+      "title": "Google API klíč",
+      "description": "API klíč s přístupem k Cloud Text-to-Speech API. Uloží se do systémového keychainu. Alternativně lze použít env GOOGLE_API_KEY.",
+      "sensitive": true,
+      "required": false
+    },
+    "voiceName": {
+      "type": "string",
+      "title": "Hlas",
+      "description": "Jméno TTS hlasu (např. cs-CZ-Chirp3-HD-Achernar).",
+      "required": false,
+      "default": "cs-CZ-Chirp3-HD-Achernar"
+    },
+    "languageCode": {
+      "type": "string",
+      "title": "Jazyk",
+      "description": "Kód jazyka (např. cs-CZ).",
+      "required": false,
+      "default": "cs-CZ"
+    },
+    "speakingRate": {
+      "type": "number",
+      "title": "Tempo řeči",
+      "description": "Násobič rychlosti (0.25 až 2.0).",
+      "min": 0.25,
+      "max": 2.0,
+      "default": 1.0,
+      "required": false
+    },
+    "maxChars": {
+      "type": "number",
+      "title": "Maximální délka",
+      "description": "Maximální počet znaků posílaných do TTS na jedno volání.",
+      "min": 100,
+      "max": 5000,
+      "default": 1200,
+      "required": false
+    }
+  }
+}
