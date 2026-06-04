@@ -201,6 +201,11 @@ Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/
   Linux GUI nevyjede.
 - **macOS:** Tkinter bývá součástí Pythonu (případně `brew install python-tk`).
 
+**Hladké ikony (volitelné):** s **Pillow** se ikony vykreslí anti-aliasovaně
+(supersampling) — `pip install pillow` (nebo `sudo apt install python3-pil`). Bez
+Pillow se použijí jednodušší vektorové ikony kreslené přímo na canvasu (panel
+funguje i tak).
+
 ### Výběr hlasu
 
 Plugin používá **jen české Chirp 3 HD hlasy**. Nemusíš psát celý název — buď zvol

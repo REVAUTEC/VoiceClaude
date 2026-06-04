@@ -81,7 +81,9 @@ case "$cmd" in
   panel)
     if "$PY" -c "import tkinter" 2>/dev/null; then
       nohup "$PY" "$ROOT/scripts/panel.py" >/dev/null 2>&1 &
-      echo "🪟 panel spuštěn (plovoucí lišta, always-on-top)."
+      echo "🪟 panel spuštěn (plovoucí ikonová lišta, always-on-top)."
+      "$PY" -c "import PIL" 2>/dev/null || \
+        echo "   tip: pro hladké (anti-aliasované) ikony nainstaluj Pillow: pip install pillow"
       echo "   Pokud se neukázal: WSL → potřebuješ Windows 11 (WSLg) a 'sudo apt install python3-tk';"
       echo "   nejjistější je spustit ho z vlastního terminálu: $PY \"$ROOT/scripts/panel.py\" &"
     else

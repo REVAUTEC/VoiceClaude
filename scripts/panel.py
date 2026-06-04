@@ -30,6 +30,16 @@ except Exception:
     sys.stderr.write("Chybí Tkinter. Ubuntu/WSL: sudo apt install python3-tk\n")
     sys.exit(1)
 
+# Volitelné: Pillow → anti-aliasované (hladké) ikony. Bez něj se použije
+# vektorové kreslení na canvasu (funkční, jen méně hladké).
+try:
+    import io
+    import base64
+    from PIL import Image, ImageDraw
+    HAS_PIL = True
+except Exception:
+    HAS_PIL = False
+
 POLL_MS = 1000
 RATE_STEP = 0.25
 RATE_MIN, RATE_MAX = 0.25, 2.0
@@ -106,6 +116,74 @@ def _next(value, cycle):
     return cycle[0]
 
 
+def render_icon(name, px, primary, accent, mode="auto", fill=1.0):
+    """Vykreslí ikonu anti-aliasovaně (supersampling 4× + LANCZOS) → PIL Image.
+    Souřadnice v „38-mřížce" se středem (0,0); P() je převede na pixely."""
+    ss = 4
+    d_px = px * ss
+    s = d_px / 38.0
+    img = Image.new("RGBA", (d_px, d_px), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(img)
+    cen = d_px / 2.0
+    lw = max(1, int(round(2 * s)))
+    tw = max(1, int(round(1 * s)))
+
+    def P(ox, oy):
+        return (cen + ox * s, cen + oy * s)
+
+    def box(x1, y1, x2, y2):
+        return [cen + x1 * s, cen + y1 * s, cen + x2 * s, cen + y2 * s]
+
+    if name == "power":
+        dr.arc(box(-9, -9, 9, 9), 300, 240, fill=primary, width=lw)
+        dr.line([P(0, -11), P(0, -1)], fill=primary, width=lw)
+    elif name == "mute":
+        dr.polygon([P(-8, -3), P(-3, -3), P(1, -8), P(1, 8), P(-3, 3),
+                    P(-8, 3)], fill=primary)
+        if mode == "active":
+            dr.line([P(-9, 9), P(9, -9)], fill=primary, width=lw)
+        else:
+            dr.arc(box(-2, -4, 6, 4), -55, 55, fill=primary, width=tw)
+            dr.arc(box(-6, -8, 10, 8), -55, 55, fill=primary, width=tw)
+    elif name == "length":
+        rows = [(-3, 8), (3, 4)] if mode == "short" else [(-8, 9), (-3, 9),
+                                                           (2, 7), (7, 5)]
+        for dy, w in rows:
+            dr.line([P(-8, dy), P(-8 + w + 6, dy)], fill=primary, width=lw)
+    elif name == "voice":
+        dr.ellipse(box(-4, -9, 4, -1), fill=primary)
+        dr.arc(box(-8, 1, 8, 16), 180, 360, fill=primary, width=lw)
+    elif name == "speed":
+        dr.arc(box(-9, -7, 9, 11), 180, 360, fill=primary, width=lw)
+        dr.line([P(0, 2), P(6, -5)], fill=accent, width=lw)
+    elif name == "theme":
+        dr.ellipse(box(-9, -9, 9, 9), outline=primary, width=lw)
+        dr.pieslice(box(-9, -9, 9, 9), -90, 90, fill=primary)
+        if mode != "auto":
+            dr.ellipse(box(5, -11, 10, -6), fill=accent)
+    elif name == "opacity":
+        dr.rectangle(box(-8, -8, 8, 8), outline=primary, width=lw)
+        fh = 16.0 * fill
+        if fh > 0.5:
+            dr.rectangle(box(-8, 8 - fh, 8, 8), fill=accent)
+    elif name == "orient":
+        for dy in (-4, 4):
+            dr.line([P(-7, dy), P(7, dy)], fill=primary, width=lw)
+            dr.polygon([P(7, dy), P(4, dy - 2.6), P(4, dy + 2.6)], fill=primary)
+            dr.polygon([P(-7, dy), P(-4, dy - 2.6), P(-4, dy + 2.6)],
+                       fill=primary)
+    elif name == "grip":
+        for dx in (-3, 3):
+            for dy in (-7, 0, 7):
+                dr.ellipse(box(dx - 1.4, dy - 1.4, dx + 1.4, dy + 1.4),
+                           fill=primary)
+    elif name == "close":
+        dr.line([P(-6, -6), P(6, 6)], fill=primary, width=lw)
+        dr.line([P(-6, 6), P(6, -6)], fill=primary, width=lw)
+
+    return img.resize((px, px), Image.LANCZOS)
+
+
 class Tip:
     """Jednoduchý tooltip."""
     def __init__(self, root):
@@ -140,6 +218,7 @@ class Panel:
         self.st = {}
         self._drag = None
         self._tip_after = None
+        self._icon_cache = {}
 
         fam = {"darwin": "Helvetica Neue", "win32": "Segoe UI"}.get(
             sys.platform, "DejaVu Sans")
@@ -392,7 +471,58 @@ class Panel:
                             fill=self.c["elevate"], outline="")
             self.draw_icon(name, cx, cy, x2, y2)
 
+    def _icon_photo(self, name, primary, accent, mode, fill):
+        key = (name, primary, accent, mode, round(fill, 3))
+        ph = self._icon_cache.get(key)
+        if ph is None:
+            img = render_icon(name, CELL, primary, accent, mode, fill)
+            buf = io.BytesIO()
+            img.save(buf, "PNG")
+            ph = tk.PhotoImage(data=base64.b64encode(buf.getvalue()).decode())
+            self._icon_cache[key] = ph
+        return ph
+
     def draw_icon(self, name, cx, cy, x2, y2):
+        col = self.c
+        s = self.st
+        if not HAS_PIL:
+            return self.draw_icon_vec(name, cx, cy, x2, y2)
+
+        fg, accent = col["fg"], col["accent"]
+        primary, mode, fill = fg, "auto", 1.0
+        if name == "power":
+            primary = col["on"] if s.get("enabled") else col["off"]
+        elif name == "mute":
+            mode = "active" if int(s.get("muteRemaining") or 0) > 0 else "idle"
+            primary = col["amber"] if mode == "active" else fg
+        elif name == "length":
+            mode = "short" if (s.get("summaryLength") or "long") == "short" \
+                else "long"
+        elif name == "theme":
+            mode = self.theme_mode
+        elif name == "opacity":
+            fill = self.alpha
+        elif name in ("grip", "close"):
+            primary = col["dim"]
+        self.cv.create_image(cx, cy,
+                             image=self._icon_photo(name, primary, accent,
+                                                    mode, fill))
+        # dynamické popisky (text je AA přes OS)
+        if name == "mute":
+            m = int(s.get("muteRemaining") or 0)
+            if m > 0:
+                badge = "∞" if m >= 100000 else str(m)
+                self.cv.create_text(x2 - 6, y2 - 7, text=badge,
+                                    fill=col["amber"], font=self.font_badge)
+        elif name == "speed":
+            self.cv.create_text(cx, cy + 9, text="%g×" % round(self.rate_value(),
+                                                               2),
+                                fill=col["dim"], font=self.font_badge)
+        elif name == "opacity" and self.alpha < 0.999:
+            self.cv.create_text(cx, cy + 13, text="%d%%" % int(self.alpha * 100),
+                                fill=col["dim"], font=self.font_badge)
+
+    def draw_icon_vec(self, name, cx, cy, x2, y2):
         c = self.cv
         col = self.c
         fg, accent = col["fg"], col["accent"]
