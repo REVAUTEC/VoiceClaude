@@ -206,14 +206,20 @@ Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/
 Pillow se použijí jednodušší vektorové ikony kreslené přímo na canvasu (panel
 funguje i tak).
 
-**Always-on-top ve Windows/WSL:** ve WSLg je každé Linux okno samostatné Windows
-okno přes RAIL. Samotný X11 „topmost" **nedrží nad nativními Windows okny**
-(Warp, Windows Terminal…). Panel to řeší sám: po spuštění si přes `powershell.exe`
-nastaví **skutečný Windows topmost** (`SetWindowPos HWND_TOPMOST`) na své okno, takže
-zůstane navrchu i nad terminálem. Pokud by to ve tvé konfiguraci nezabralo:
+**Always-on-top ve Windows/WSL:** WSLg okno (Linux GUI přes RAIL) **neumí držet
+topmost nad nativními Windows okny** (Warp, Windows Terminal…) — z Linux strany se to
+spolehlivě nevyřeší. Proto ve WSL `/speak panel` spustí panel **nativně ve Windows
+Pythonem** (`python.exe`), kde `-topmost` je standardní Win32 a **drží nad Warpem**.
+Panel přitom sahá do **stejného** `state.json` ve WSL přes `\\wsl.localhost\…` cestu,
+takže zůstává synchronní s pluginem.
 
-- spusť panel s lištou (spolehlivější spárování okna): `VC_PANEL_TITLED=1 python3 .../scripts/panel.py &`
-- nebo jako záloha **PowerToys → Always On Top** (`Win + Ctrl + T` na okno panelu).
+- **Podmínka:** mít na Windows nainstalovaný **Python** (python.org nebo Microsoft
+  Store). Ověř v WSL: `python.exe --version`. Tkinter je součástí; pro hladké ikony
+  volitelně `python.exe -m pip install pillow`.
+- Na **Ubuntu/macOS** topmost funguje nativně přes Tkinter, žádný Windows Python netřeba.
+- Ruční spuštění nativního panelu z WSL:
+  `python.exe "$(wslpath -w .../scripts/panel.py)" "$(wslpath -w ~/.config/voice-claude/state.json)"`
+- Špendlík v panelu přepíná „vždy navrchu" zap/vyp.
 
 ### Výběr hlasu
 

@@ -21,6 +21,11 @@ import shutil
 import base64
 import subprocess
 
+# Volitelný 1. argument = cesta ke state.json (Windows panel sahá do WSL stavu
+# přes \\wsl.localhost\… cestu). Musí být nastaveno před importem state.
+if len(sys.argv) > 1 and sys.argv[1]:
+    os.environ.setdefault("VC_STATE_FILE", sys.argv[1])
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import state  # noqa: E402
 import voices  # noqa: E402
