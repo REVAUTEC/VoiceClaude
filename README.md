@@ -8,6 +8,42 @@ Shrnutí píše sám Claude do tagu `<voice>…</voice>` na konci odpovědi (ž�
 LLM krok → nulová extra latence). Plugin přečte jen obsah tagu. Čte se **až po
 úplném dokončení** odpovědi (Stop hook), nikdy během psaní.
 
+## ⚡ Instalace ve 3 krocích
+
+> Potřebuješ jen Claude Code, `python3`, `jq`, audio přehrávač a Google API klíč
+> s povoleným **Cloud Text-to-Speech API**. Detaily níže v [Požadavky](#požadavky)
+> a [Setup klíče](#setup-klíče-jednorázově).
+
+```text
+# 1) Přidej tenhle repozitář jako marketplace
+/plugin marketplace add revautec/voiceclaude
+
+# 2) Nainstaluj plugin (při instalaci tě požádá o googleApiKey)
+/plugin install voice-claude@voice-claude
+
+# 3) Ověř, že vše sedí
+/speak doctor
+```
+
+A je to — od téhle chvíle ti Claude po každé odpovědi **česky nahlas přečte
+krátké shrnutí**. Vypnout/zapnout kdykoli přes `/speak off` a `/speak on`.
+
+**Co se při instalaci stane (proč to rovnou mluví):**
+
+1. `/plugin marketplace add` načte z repozitáře `.claude-plugin/marketplace.json` →
+   Claude Code uvidí plugin `voice-claude`.
+2. `/plugin install` přečte `.claude-plugin/plugin.json`: zaregistruje slash command
+   `/speak`, oba hooky z `hooks/hooks.json` a zeptá se na hodnoty z `userConfig`
+   (hlavně `googleApiKey`, který uloží do systémového keychainu). Hodnoty se
+   skriptům předají jako `CLAUDE_PLUGIN_OPTION_*`.
+3. Při startu každého sezení **SessionStart hook** (`injectvoiceinstruction.sh`)
+   tiše řekne Claudovi, ať na konec běžných odpovědí přidává `<voice>…</voice>`.
+4. Po dokončení každé odpovědi **Stop hook** (`speak.sh`) vytáhne obsah `<voice>`,
+   pošle ho do Google TTS, dostane WAV a přehraje ho na pozadí.
+
+Plugin je tak **mluvící hned po instalaci**, bez další konfigurace (default je
+zapnuto). Pro vývoj/test bez marketplace lze i `claude --plugin-dir ./voiceclaude`.
+
 ## Jak to funguje
 
 ```
