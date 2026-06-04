@@ -9,11 +9,23 @@ echo "voice-claude doctor:"
 command -v "$PY" >/dev/null 2>&1 && ok "python3" || bad "python3 chybí"
 command -v jq >/dev/null 2>&1 && ok "jq" || bad "jq chybí (nutné pro Stop hook — čtení stavu a odpovědi)"
 
+# Vyber přehrávač stejně jako play.sh: pw-play přeskoč, když PipeWire server neběží
+# (např. WSLg má jen PulseAudio → pw-play by selhal "Host is down").
 P=""
-for p in pw-play paplay aplay ffplay mpv; do
-  if command -v "$p" >/dev/null 2>&1; then P="$p"; break; fi
+for p in pw-play paplay ffplay aplay mpv; do
+  if command -v "$p" >/dev/null 2>&1; then
+    if [ "$p" = "pw-play" ] && [ ! -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pipewire-0" ]; then
+      continue
+    fi
+    P="$p"; break
+  fi
 done
-[ -n "$P" ] && ok "přehrávač: $P" || bad "žádný přehrávač (nainstaluj mpv nebo pw-play/aplay)"
+if [ -n "$P" ]; then
+  ok "přehrávač: $P"
+  [ "$P" = "ffplay" ] && printf '  ⚠️  %s\n' "ffplay může ve WSLg praskat (buffer underrun). Pro čistý zvuk: 'sudo apt install pulseaudio-utils' (paplay)."
+else
+  bad "žádný použitelný přehrávač (nainstaluj pulseaudio-utils → paplay, nebo ffmpeg → ffplay)"
+fi
 
 keyfound="$("$PY" - <<'PYEOF'
 import os
