@@ -2,7 +2,7 @@
   "name": "voice-claude",
   "displayName": "voice-claude",
   "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), primárně česky.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Smartweby",
     "email": "info@smartweby.cz"
@@ -11,7 +11,6 @@
   "repository": "https://github.com/revautec/voiceclaude",
   "license": "MIT",
   "keywords": ["tts", "text-to-speech", "voice", "google-cloud", "cs-CZ", "chirp"],
-  "hooks": "./hooks/hooks.json",
   "userConfig": {
     "googleApiKey": {
       "type": "string",
