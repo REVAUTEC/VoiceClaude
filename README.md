@@ -44,7 +44,8 @@ krátké shrnutí**. Vypnout/zapnout kdykoli přes `/speak off` a `/speak on`.
 1. `/plugin marketplace add` načte z repozitáře `.claude-plugin/marketplace.json` →
    Claude Code uvidí plugin `voice-claude`.
 2. `/plugin install` přečte `.claude-plugin/plugin.json`: zaregistruje slash command
-   `/speak`, oba hooky z `hooks/hooks.json` a zeptá se na hodnoty z `userConfig`
+   (v našeptávači jako **`/voice-claude:speak`**), oba hooky z `hooks/hooks.json`
+   a zeptá se na hodnoty z `userConfig`
    (hlavně `googleApiKey`, který uloží do systémového keychainu). Hodnoty se
    skriptům předají jako `CLAUDE_PLUGIN_OPTION_*`.
 3. Při startu každého sezení **SessionStart hook** (`injectvoiceinstruction.sh`)
@@ -145,18 +146,47 @@ git config --global --unset-all url."git@github.com:".insteadOf
 
 ## Ovládání: `/speak`
 
+> **Pozn. k názvu:** Claude Code u pluginů používá **jmenné (namespaced) příkazy**.
+> V našeptávači (`/`) se příkaz objeví jako **`/voice-claude:speak`**, ne jako holé
+> `/speak`. Stačí napsat `voice` nebo `speak` a vybrat ho ze seznamu.
+
 | Příkaz | Co dělá |
 |---|---|
-| `/speak` nebo `/speak status` | stav (zap/vyp, pohlaví, hlas, tempo, mute, poslední chyba) |
-| `/speak on` / `/speak off` | zapne / okamžitě ztiší |
+| `/speak` nebo `/speak status` | stav (zap/vyp, délka, pohlaví, hlas, tempo, mute, poslední chyba) |
+| `/speak on` / `/speak off` / `/speak toggle` | zapne / vypne / přepne |
+| `/speak short` / `/speak long` / `/speak length` | délka shrnutí: **krátké** (jen 1. věta) / **dlouhé** (celé `<voice>`) / přepnout |
 | `/speak mute <n>` | ztlumí dalších **n** tahů, pak se sám zapne |
 | `/speak gender <žena\|muž>` | vybere pohlaví a tím výchozí hlas (žena → Aoede, muž → Charon) |
 | `/speak voices` | vypíše dostupné české Chirp 3 HD hlasy |
 | `/speak voice <jméno>` | konkrétní hlas krátkým jménem (např. `/speak voice Leda`) |
 | `/speak rate <0.25–2.0>` | tempo řeči |
+| `/speak panel` | spustí **plovoucí ovládací panel** (viz níže) |
 | `/speak doctor` | preflight: python, jq, přehrávač, klíč, poslední chyba |
 
-Default: **zapnuto**, jazyk **cs-CZ** (napevno), hlas **ženský** (Aoede), max. délka **1500** znaků.
+Default: **zapnuto**, jazyk **cs-CZ** (napevno), hlas **ženský** (Aoede), délka **dlouhé**,
+max. délka **1500** znaků.
+
+## Plovoucí panel (ovládání myší)
+
+Když nechceš psát příkazy, spusť **mini-appku** — malou lištu, která **leží nad
+terminálem (always-on-top)** a ovládáš ji **myší**. Klik se hned uloží do stejného
+stavu, který čte plugin, takže panel, `/speak` i hlas jsou pořád synchronní (panel se
+sám aktualizuje ~1×/s).
+
+```
+[🔊 ZAP] [✍ DLOUHÉ] [žena · Aoede ▾] [− 1× +] [⇅]
+```
+
+- **🔊/🔇** zap/vyp · **✍** krátké/dlouhé · **▾** výběr hlasu · **−/+** tempo
+- **⇅** přepíná **vodorovnou ↔ svislou** orientaci (volba se pamatuje)
+
+Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/panel.py" &`.
+
+**Požadavky (Tkinter, je v Pythonu):**
+- **Ubuntu / WSL:** `sudo apt install python3-tk`
+- **Windows 11 + WSL:** okno se ukáže díky **WSLg** (WSL2 ve Win 11). Na Win 10 bez WSLg
+  Linux GUI nevyjede.
+- **macOS:** Tkinter bývá součástí Pythonu (případně `brew install python-tk`).
 
 ### Výběr hlasu
 
@@ -218,6 +248,7 @@ scripts/
   tts.py             # Google Cloud TTS (jen stdlib)
   state.py           # atomický stav v ~/.config/voice-claude/state.json
   voices.py          # české Chirp 3 HD hlasy + mapování pohlaví → jméno
+  panel.py           # plovoucí ovládací panel (Tkinter, always-on-top, H/V)
   speakctl.sh        # logika /speak
   doctor.sh          # diagnostika
   play.sh            # přehrávač audia

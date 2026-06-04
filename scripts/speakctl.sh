@@ -60,11 +60,40 @@ case "$cmd" in
     else
       echo "Neplatné tempo '$1'. Zadej číslo v rozsahu 0.25–2.0."
     fi ;;
+  toggle)
+    if [ "$(st get enabled)" = "true" ]; then
+      st set enabled false; echo "🔇 voice-claude vypnut."
+    else
+      st set enabled true; st set muteRemaining 0; echo "🔊 voice-claude zapnut."
+    fi ;;
+  short)
+    st set summaryLength short
+    echo "✍ délka = krátké (přečte jen 1. větu shrnutí)." ;;
+  long)
+    st set summaryLength long
+    echo "✍ délka = dlouhé (přečte celé <voice> shrnutí)." ;;
+  length)
+    if [ "$(st get summaryLength)" = "short" ]; then
+      st set summaryLength long; echo "✍ délka = dlouhé."
+    else
+      st set summaryLength short; echo "✍ délka = krátké."
+    fi ;;
+  panel)
+    if "$PY" -c "import tkinter" 2>/dev/null; then
+      nohup "$PY" "$ROOT/scripts/panel.py" >/dev/null 2>&1 &
+      echo "🪟 panel spuštěn (plovoucí lišta, always-on-top)."
+      echo "   Pokud se neukázal: WSL → potřebuješ Windows 11 (WSLg) a 'sudo apt install python3-tk';"
+      echo "   nejjistější je spustit ho z vlastního terminálu: $PY \"$ROOT/scripts/panel.py\" &"
+    else
+      echo "Chybí Tkinter (GUI knihovna)."
+      echo "   Ubuntu/WSL: sudo apt install python3-tk"
+      echo "   macOS: bývá součástí Pythonu z python.org (nebo: brew install python-tk)"
+    fi ;;
   doctor)
     bash "$ROOT/scripts/doctor.sh" ;;
   status)
     echo "voice-claude stav:"
     st getjson ;;
   *)
-    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | mute [n] | gender <žena|muž> | voice [jméno] | voices | rate <x> | doctor" ;;
+    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | toggle | mute [n] | short | long | length | gender <žena|muž> | voice [jméno] | voices | rate <x> | panel | doctor" ;;
 esac

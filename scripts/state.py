@@ -25,6 +25,8 @@ DEFAULTS = {
     "speakingRate": None,
     "muteRemaining": 0,
     "lastError": "",
+    "summaryLength": "long",     # "short" = jen 1. věta <voice>, "long" = celé
+    "panelOrientation": "h",     # plovoucí panel: "h" vodorovně / "v" svisle
 }
 
 

@@ -24,6 +24,13 @@ except ValueError:
 
 FENCE = re.compile(r"```.*?```", re.S)
 VOICE = re.compile(r"<voice>(.*?)</voice>", re.I | re.S)
+SENT_END = re.compile(r"[.!?…](\s|$)")
+
+
+def first_sentence(text):
+    """Vrátí první větu (po . ! ? …). Když konec věty nenajde, vrátí celý text."""
+    m = SENT_END.search(text)
+    return text[: m.end()].strip() if m else text
 
 
 def last_assistant_from_transcript(path):
@@ -74,6 +81,8 @@ def main():
     else:
         raw = sys.stdin.read()
     out = extract(raw)
+    if out and os.environ.get("VC_SUMMARY", "").strip().lower() == "short":
+        out = first_sentence(out)
     if out:
         sys.stdout.write(out)
 
