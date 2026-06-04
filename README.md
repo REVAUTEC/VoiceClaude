@@ -147,14 +147,29 @@ git config --global --unset-all url."git@github.com:".insteadOf
 
 | Příkaz | Co dělá |
 |---|---|
-| `/speak` nebo `/speak status` | stav (zap/vyp, hlas, tempo, mute, poslední chyba) |
+| `/speak` nebo `/speak status` | stav (zap/vyp, pohlaví, hlas, tempo, mute, poslední chyba) |
 | `/speak on` / `/speak off` | zapne / okamžitě ztiší |
 | `/speak mute <n>` | ztlumí dalších **n** tahů, pak se sám zapne |
-| `/speak voice <jméno>` | změní hlas (např. `cs-CZ-Chirp3-HD-Aoede`) |
+| `/speak gender <žena\|muž>` | vybere pohlaví a tím výchozí hlas (žena → Aoede, muž → Charon) |
+| `/speak voices` | vypíše dostupné české Chirp 3 HD hlasy |
+| `/speak voice <jméno>` | konkrétní hlas krátkým jménem (např. `/speak voice Leda`) |
 | `/speak rate <0.25–2.0>` | tempo řeči |
-| `/speak doctor` | preflight: python, přehrávač, klíč, poslední chyba |
+| `/speak doctor` | preflight: python, jq, přehrávač, klíč, poslední chyba |
 
-Default: **zapnuto**.
+Default: **zapnuto**, jazyk **cs-CZ** (napevno), hlas **ženský** (Aoede), max. délka **1500** znaků.
+
+### Výběr hlasu
+
+Plugin používá **jen české Chirp 3 HD hlasy**. Nemusíš psát celý název — buď zvol
+pohlaví (`/speak gender žena|muž`), nebo krátké jméno (`/speak voice Aoede`):
+
+- **ženské:** Aoede, Kore, Leda, Zephyr
+- **mužské:** Puck, Charon, Fenrir, Orus
+
+Pohlaví lze předvybrat i při instalaci v poli **„Hlas: žena nebo muž"**.
+
+> Pozn.: Claude Code v instalačním dialogu neumí rozbalovací/radio výběr — proto je
+> pohlaví textové pole a konkrétní jméno hlasu se volí příkazem `/speak voice`.
 
 ## Soukromí
 
@@ -184,6 +199,7 @@ scripts/
   resolve.py         # extrakce <voice>…</voice>
   tts.py             # Google Cloud TTS (jen stdlib)
   state.py           # atomický stav v ~/.config/voice-claude/state.json
+  voices.py          # české Chirp 3 HD hlasy + mapování pohlaví → jméno
   speakctl.sh        # logika /speak
   doctor.sh          # diagnostika
   play.sh            # přehrávač audia

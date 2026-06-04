@@ -1,11 +1,10 @@
 {
   "name": "voice-claude",
   "displayName": "voice-claude",
-  "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), primárně česky.",
-  "version": "0.1.2",
+  "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), česky.",
+  "version": "0.1.3",
   "author": {
-    "name": "Smartweby",
-    "email": "info@smartweby.cz"
+    "name": "REVAUTEC"
   },
   "homepage": "https://github.com/revautec/voiceclaude",
   "repository": "https://github.com/revautec/voiceclaude",
@@ -15,23 +14,16 @@
     "googleApiKey": {
       "type": "string",
       "title": "Google API klíč",
-      "description": "API klíč s přístupem k Cloud Text-to-Speech API. Uloží se do systémového keychainu. Alternativně lze použít env GOOGLE_API_KEY.",
+      "description": "API klíč s přístupem k Cloud Text-to-Speech API. Uloží se do systémového keychainu.",
       "sensitive": true,
       "required": false
     },
-    "voiceName": {
+    "gender": {
       "type": "string",
-      "title": "Hlas",
-      "description": "Jméno TTS hlasu (např. cs-CZ-Chirp3-HD-Achernar).",
-      "required": false,
-      "default": "cs-CZ-Chirp3-HD-Achernar"
-    },
-    "languageCode": {
-      "type": "string",
-      "title": "Jazyk",
-      "description": "Kód jazyka (např. cs-CZ).",
-      "required": false,
-      "default": "cs-CZ"
+      "title": "Hlas: žena nebo muž",
+      "description": "Napiš 'žena' nebo 'muž' — vybere se český Chirp 3 HD hlas (nemusíš psát celý název). Konkrétní jméno hlasu lze pak zvolit přes /speak voice.",
+      "default": "žena",
+      "required": false
     },
     "speakingRate": {
       "type": "number",
@@ -48,7 +40,7 @@
       "description": "Maximální počet znaků posílaných do TTS na jedno volání.",
       "min": 100,
       "max": 5000,
-      "default": 1200,
+      "default": 1500,
       "required": false
     }
   }

@@ -1,18 +1,16 @@
 {
   "name": "voice-claude",
   "owner": {
-    "name": "Smartweby",
-    "email": "info@smartweby.cz"
+    "name": "REVAUTEC"
   },
   "plugins": [
     {
       "name": "voice-claude",
       "source": "./",
-      "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), primárně česky.",
-      "version": "0.1.2",
+      "description": "Nahlas předčítá mluvené shrnutí každé odpovědi Claude přes Google Cloud Text-to-Speech (Chirp 3 HD), česky.",
+      "version": "0.1.3",
       "author": {
-        "name": "Smartweby",
-        "email": "info@smartweby.cz"
+        "name": "REVAUTEC"
       },
       "homepage": "https://github.com/revautec/voiceclaude",
       "repository": "https://github.com/revautec/voiceclaude",

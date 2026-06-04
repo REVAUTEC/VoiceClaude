@@ -46,11 +46,20 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
 
   [ -n "$text" ] || { log "žádné <voice> shrnutí → ticho"; exit 0; }
 
-  vn="$(sv '.voiceName // empty')"; lc="$(sv '.languageCode // empty')"; sr="$(sv '.speakingRate // empty')"
-  export VC_VOICE="${vn:-${CLAUDE_PLUGIN_OPTION_VOICENAME:-cs-CZ-Chirp3-HD-Achernar}}"
-  export VC_LANG="${lc:-${CLAUDE_PLUGIN_OPTION_LANGUAGECODE:-cs-CZ}}"
+  # Jazyk je napevno český. Hlas: 1) explicitně zvolený (/speak voice|gender),
+  # jinak 2) podle pohlaví z userConfigu (default žena → Aoede).
+  export VC_LANG="cs-CZ"
+  vn="$(sv '.voiceName // empty')"
+  if [ -z "$vn" ]; then
+    case "${CLAUDE_PLUGIN_OPTION_GENDER:-žena}" in
+      [mM]už|[mM]uz|muž|muz|male|Male|MALE|m|M|pán|pan) vn="cs-CZ-Chirp3-HD-Charon" ;;
+      *) vn="cs-CZ-Chirp3-HD-Aoede" ;;
+    esac
+  fi
+  export VC_VOICE="$vn"
+  sr="$(sv '.speakingRate // empty')"
   export VC_RATE="${sr:-${CLAUDE_PLUGIN_OPTION_SPEAKINGRATE:-1.0}}"
-  export VC_MAXCHARS="${CLAUDE_PLUGIN_OPTION_MAXCHARS:-1200}"
+  export VC_MAXCHARS="${CLAUDE_PLUGIN_OPTION_MAXCHARS:-1500}"
 
   out="$RUN/out.$$.wav"
   res="$(printf '%s' "$text" | timeout 20 "$PY" "$ROOT/scripts/tts.py" "$out" 2>>"$LOG")"
