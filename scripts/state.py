@@ -27,6 +27,8 @@ DEFAULTS = {
     "lastError": "",
     "summaryLength": "long",     # "short" = jen 1. věta <voice>, "long" = celé
     "panelOrientation": "h",     # plovoucí panel: "h" vodorovně / "v" svisle
+    "panelTheme": "auto",        # panel: "auto" (dle OS) / "dark" / "light"
+    "panelAlpha": 1.0,           # panel: průhlednost 1.0 = plné, 0.5 = 50 %
 }
 
 

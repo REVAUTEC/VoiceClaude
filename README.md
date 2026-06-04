@@ -174,11 +174,21 @@ stavu, který čte plugin, takže panel, `/speak` i hlas jsou pořád synchronn�
 sám aktualizuje ~1×/s).
 
 ```
-[🔊 ZAP] [✍ DLOUHÉ] [žena · Aoede ▾] [− 1× +] [⇅]
+[≡] [● ZAP] [TICHO] [DLOUHÉ] [žena · Aoede ▾] [− 1× +] [◑] [100%] [⇅] [×]
 ```
 
-- **🔊/🔇** zap/vyp · **✍** krátké/dlouhé · **▾** výběr hlasu · **−/+** tempo
-- **⇅** přepíná **vodorovnou ↔ svislou** orientaci (volba se pamatuje)
+- **● ZAP / VYP** — zap/vyp (zelená/červená)
+- **TICHO** — ztlumení **na první klik**; cykluje **1 → 3 → ∞ tahů → vyp** (jantarová, ukazuje zbývající počet), pak se hlas sám zapne
+- **DLOUHÉ / KRÁTKÉ** — délka shrnutí
+- **žena · Aoede ▾** — výběr hlasu
+- **− 1× +** — tempo
+- **◑** — téma: **auto (dle OS) → dark → light** (automatický dark mode dle Windows/macOS/GNOME)
+- **100%** — průhlednost: **100 → 75 → 50 %**
+- **⇅** — orientace **vodorovně ↔ svisle** (pamatuje se)
+- **≡** táhnout oknem, **×** zavřít (bezrámové okno; na macOS nativní lišta)
+
+Vzhled se ukládá do stavu (`panelTheme`, `panelAlpha`, `panelOrientation`), takže se
+panel otevře tak, jak jsi ho nechal.
 
 Spuštění: `/speak panel`, nebo přímo `python3 "$CLAUDE_PLUGIN_ROOT/scripts/panel.py" &`.
 
