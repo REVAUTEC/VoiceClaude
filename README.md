@@ -10,34 +10,43 @@ LLM krok → nulová extra latence). Plugin přečte jen obsah tagu. Čte se **a
 
 ## ⚡ Instalace ve 3 krocích
 
-> Potřebuješ jen Claude Code, `python3`, `jq`, audio přehrávač a Google API klíč
-> s povoleným **Cloud Text-to-Speech API**. Detaily níže v [Požadavky](#požadavky)
+> Potřebuješ Claude Code, `python3`, `jq`, audio přehrávač a Google API klíč
+> s povoleným **Cloud Text-to-Speech API**. Detaily v [Požadavky](#požadavky)
 > a [Setup klíče](#setup-klíče-jednorázově).
 
+**1. Přidej marketplace** (HTTPS – funguje bez SSH klíče):
 ```text
-# 1) Přidej tenhle repozitář jako marketplace (HTTPS – funguje bez SSH klíče)
 /plugin marketplace add https://github.com/revautec/voiceclaude.git
-
-# 2) Nainstaluj plugin (při instalaci tě požádá o googleApiKey)
-/plugin install voice-claude@voice-claude
-
-# 3) Ověř, že vše sedí
-/speak doctor
 ```
 
-> **⚠️ Důležité – proč HTTPS URL a ne zkratka `revautec/voiceclaude`:**
-> Claude Code u zkratky `owner/repo` klonuje **přes SSH** (`git@github.com`), což
-> selže na stroji bez nastaveného GitHub SSH klíče (`Permission denied (publickey)`),
-> i u veřejného repozitáře. Použij proto **plnou HTTPS adresu s `.git`** jako výše.
-> Alternativně lze zkratku povolit přes proměnnou prostředí:
-> ```bash
-> export CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1   # pak funguje i: /plugin marketplace add revautec/voiceclaude
-> ```
-> Kdyby i HTTPS skončilo SSH chybou, má tvůj git přepis `insteadOf` (viz
-> [Řešení potíží](#řešení-potíží-instalace)) — pak použij instalaci ze ZIPu.
+**2. Nainstaluj plugin** (při instalaci tě požádá o `googleApiKey`):
+```text
+/plugin install voice-claude@voice-claude
+```
+
+**3. Ověř, že vše sedí:**
+```text
+/voice-claude:speak doctor
+```
 
 A je to — od téhle chvíle ti Claude po každé odpovědi **česky nahlas přečte
-krátké shrnutí**. Vypnout/zapnout kdykoli přes `/speak off` a `/speak on`.
+krátké shrnutí**.
+
+> **📛 Jak se volají příkazy:** u pluginů jsou příkazy **jmenné (namespaced)** — píšeš
+> **`/voice-claude:speak …`**, ne holé `/speak`. V našeptávači (`/`) stačí napsat
+> `voice` nebo `speak` a vybrat ho ze seznamu. Nejčastější:
+> ```text
+> /voice-claude:speak            # stav
+> /voice-claude:speak off        # vypnout   ( … on = zapnout )
+> /voice-claude:speak panel      # plovoucí ovládací panel (klikání myší)
+> /voice-claude:speak doctor     # diagnostika
+> ```
+
+> **⚠️ Proč HTTPS URL a ne zkratka `revautec/voiceclaude`:** Claude Code u zkratky
+> `owner/repo` klonuje přes SSH (`git@github.com`) → na stroji bez GitHub SSH klíče to
+> selže i u veřejného repa. Použij **plnou HTTPS adresu s `.git`** (jako v kroku 1),
+> nebo `export CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`. Víc v
+> [Řešení potíží](#řešení-potíží-instalace).
 
 **Co se při instalaci stane (proč to rovnou mluví):**
 
@@ -88,7 +97,7 @@ Pro **plovoucí panel** (volitelné, viz [Plovoucí panel](#plovoucí-panel-ovl�
 - **macOS:** Tkinter v Pythonu (+ volitelně Pillow).
 - **Windows + WSL:** **Python pro Windows** (panel běží nativně kvůli always-on-top).
 
-Vše pro panel ti zkontroluje `/speak doctor`.
+Vše pro panel ti zkontroluje `/voice-claude:speak doctor`.
 
 ## Setup klíče (jednorázově)
 
@@ -119,8 +128,8 @@ nech prázdné a měj klíč v prostředí jako `GOOGLE_API_KEY`.
 
 Po instalaci ověř funkčnost:
 
-```
-/speak doctor
+```text
+/voice-claude:speak doctor
 ```
 
 ## Řešení potíží (instalace)
@@ -154,11 +163,12 @@ git config --global --unset-all url."git@github.com:".insteadOf
 ```
 …nebo prostě použij ZIP variantu (bod 3), která git vůbec nepoužívá.
 
-## Ovládání: `/speak`
+## Ovládání: `/voice-claude:speak`
 
-> **Pozn. k názvu:** Claude Code u pluginů používá **jmenné (namespaced) příkazy**.
-> V našeptávači (`/`) se příkaz objeví jako **`/voice-claude:speak`**, ne jako holé
-> `/speak`. Stačí napsat `voice` nebo `speak` a vybrat ho ze seznamu.
+> **Pozn. k názvu:** Claude Code u pluginů používá **jmenné (namespaced) příkazy** —
+> doopravdy píšeš **`/voice-claude:speak …`**, ne holé `/speak`. V našeptávači (`/`)
+> stačí napsat `voice` nebo `speak` a vybrat ho ze seznamu. **Tabulka níže používá pro
+> stručnost zápis `/speak …` = zkratku za `/voice-claude:speak …`.**
 
 | Příkaz | Co dělá |
 |---|---|
@@ -205,7 +215,7 @@ Vzhled se ukládá do stavu (`panelTheme`, `panelAlpha`, `panelOrientation`), ta
 panel otevře tak, jak jsi ho nechal.
 
 **Spuštění:** `/speak panel` (doporučeno — spouštěč si vyřeší správný Python i cesty
-sám). `/speak doctor` zkontroluje, že máš pro panel vše potřebné.
+sám). `/voice-claude:speak doctor` zkontroluje, že máš pro panel vše potřebné.
 
 **Co doinstalovat (podle platformy):**
 
