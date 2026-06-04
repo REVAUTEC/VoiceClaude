@@ -14,7 +14,7 @@ command -v jq >/dev/null 2>&1 && ok "jq" || bad "jq chybí (nutné pro Stop hook
 P=""
 for p in pw-play paplay ffplay aplay mpv; do
   if command -v "$p" >/dev/null 2>&1; then
-    if [ "$p" = "pw-play" ] && [ ! -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pipewire-0" ]; then
+    if [ "$p" = "pw-play" ] && { [ ! -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pipewire-0" ] || [ -S /mnt/wslg/PulseServer ]; }; then
       continue
     fi
     P="$p"; break
