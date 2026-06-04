@@ -171,6 +171,24 @@ Pohlaví lze předvybrat i při instalaci v poli **„Hlas: žena nebo muž"**.
 > Pozn.: Claude Code v instalačním dialogu neumí rozbalovací/radio výběr — proto je
 > pohlaví textové pole a konkrétní jméno hlasu se volí příkazem `/speak voice`.
 
+## Kvalita zvuku
+
+Pokud řeč **šumí** nebo zní méně kvalitně, je to skoro vždy v **přehrávání**, ne v TTS
+(audio z Googlu je bezztrátové LINEAR16):
+
+- **Nainstaluj nativní přehrávač.** `play.sh` preferuje `pw-play` → `paplay` → `aplay`
+  → `ffplay` → `mpv`. `ffplay` na PipeWire systémech často převzorkovává nečistě.
+  Čistší bývá PipeWire/PulseAudio:
+  ```bash
+  sudo apt install pipewire-bin      # → pw-play
+  # nebo:
+  sudo apt install pulseaudio-utils  # → paplay
+  ```
+  Po instalaci je `/speak doctor` ukáže jako vybraný přehrávač.
+- **Vzorkovací frekvence:** plugin si o zvuk říká ve **48 kHz** (čisté převzorkování na
+  straně Googlu), což omezuje šum z lokálního převzorkování. Lze změnit přes
+  `export VC_SAMPLE_RATE=24000` (nativní rychlost Chirp 3 HD).
+
 ## Soukromí
 
 Mluvené **shrnutí** odpovědi se posílá do Google (TTS). Pro citlivé / klientské

@@ -44,7 +44,14 @@ except ValueError:
     RATE = 1.0
 if not math.isfinite(RATE):  # inf/nan by se serializovaly jako neplatný JSON → 400
     RATE = 1.0
-RATE = max(0.25, min(2.0, RATE))  # Google akceptuje jen tento rozsah
+RATE = max(0.25, min(2.0, RATE))
+# Vzorkovací frekvence: Chirp 3 HD je nativně 24 kHz; o 48 kHz si řekneme rovnou
+# Googlu (čistý server-side resampling), ať lokální přehrávač nemusí převzorkovávat
+# (časté zdroje „šumu" na PipeWire/ALSA). Lze přepsat přes VC_SAMPLE_RATE.
+try:
+    SR = int(os.environ.get("VC_SAMPLE_RATE") or 48000)
+except ValueError:
+    SR = 48000  # Google akceptuje jen tento rozsah
 
 
 def redact(s):
@@ -62,7 +69,7 @@ if not KEY:
 body = json.dumps({
     "input": {"text": text},
     "voice": {"languageCode": LANG, "name": VOICE},
-    "audioConfig": {"audioEncoding": "LINEAR16", "speakingRate": RATE},
+    "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": SR, "speakingRate": RATE},
 }).encode("utf-8")
 req = urllib.request.Request(
     "https://texttospeech.googleapis.com/v1/text:synthesize",
