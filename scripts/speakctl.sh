@@ -108,11 +108,39 @@ case "$cmd" in
       echo "   Ubuntu/WSL: sudo apt install python3-tk"
       echo "   macOS: bývá součástí Pythonu z python.org (nebo: brew install python-tk)"
     fi ;;
+  revive)
+    # Obnoví WSLg audio most po uspání PC (paplay → "Connection refused") BEZ wsl --shutdown.
+    # WSLg posílá zvuk do Windows přes RDP (PulseServer → RDPSink); audio kanál hostuje Windows
+    # proces msrdc.exe. Po uspání/probuzení se kanál rozpadne. Restart msrdc.exe WSLg do ~1 s sám
+    # respawne a kanál se reinicializuje. Warp/Claude Code běží dál (jsou nezávislé na WSLg).
+    if ! grep -qi microsoft /proc/version 2>/dev/null; then
+      echo "ℹ️  'revive' je určen pro WSL (WSLg audio most). Na tomto systému není co obnovovat."
+    elif ! command -v powershell.exe >/dev/null 2>&1; then
+      echo "❌ Nenašel jsem powershell.exe — bez něj nelze restartovat WSLg audio most."
+    else
+      vc_audio_alive() { timeout 4 pactl info 2>/dev/null | grep -q 'Default Sink'; }
+      vc_sink() { timeout 4 pactl info 2>/dev/null | sed -n 's/^Default Sink: //p'; }
+      if [ "${1:-}" != "--force" ] && vc_audio_alive; then
+        echo "✅ Audio žije (Default Sink: $(vc_sink)). Není co obnovovat (vynuť: /voice-claude:speak revive --force)."
+      else
+        echo "🔧 Obnovuju WSLg audio most (restart msrdc.exe)…"
+        powershell.exe -NoProfile -Command "Stop-Process -Name msrdc -Force" >/dev/null 2>&1
+        ok=0
+        for i in $(seq 1 20); do
+          sleep 1
+          if vc_audio_alive; then
+            echo "✅ Audio obnoveno za ${i}s (Default Sink: $(vc_sink)). Bez wsl --shutdown."
+            ok=1; break
+          fi
+        done
+        [ "$ok" -eq 1 ] || echo "⚠️  Audio se neobnovilo do 20 s. Poslední možnost: z Windows spusť 'wsl --shutdown' a otevři terminál znovu."
+      fi
+    fi ;;
   doctor)
     bash "$ROOT/scripts/doctor.sh" ;;
   status)
     echo "voice-claude stav:"
     st getjson ;;
   *)
-    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | toggle | mute [n] | short | long | length | gender <žena|muž> | voice [jméno] | voices | rate <x> | panel | doctor" ;;
+    echo "Neznámý příkaz '$cmd'. Použij: status | on | off | toggle | mute [n] | short | long | length | gender <žena|muž> | voice [jméno] | voices | rate <x> | panel | revive | doctor" ;;
 esac
