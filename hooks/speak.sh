@@ -16,6 +16,13 @@ log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG" 2>/dev/null; }
 {
   payload="$(cat)"
 
+  # CC ≥2.1 nepředává ${user_config.*} interpolaci z hooks.json — options čteme sami ze settings.json.
+  vc_opt() { jq -r ".pluginConfigs[\"voice-claude@voice-claude\"].options.$1 // empty" "$HOME/.claude/settings.json" 2>/dev/null; }
+  [ -n "${CLAUDE_PLUGIN_OPTION_GOOGLEAPIKEY:-}" ] || export CLAUDE_PLUGIN_OPTION_GOOGLEAPIKEY="$(vc_opt googleApiKey)"
+  [ -n "${CLAUDE_PLUGIN_OPTION_GENDER:-}" ] || export CLAUDE_PLUGIN_OPTION_GENDER="$(vc_opt gender)"
+  [ -n "${CLAUDE_PLUGIN_OPTION_SPEAKINGRATE:-}" ] || export CLAUDE_PLUGIN_OPTION_SPEAKINGRATE="$(vc_opt speakingRate)"
+  [ -n "${CLAUDE_PLUGIN_OPTION_MAXCHARS:-}" ] || export CLAUDE_PLUGIN_OPTION_MAXCHARS="$(vc_opt maxChars)"
+
   # Úklid starých audio souborů na začátku každého tahu (proběhne i při early-exitu).
   find "$RUN" -name 'out.*.wav' -mmin +5 -delete 2>/dev/null
 
